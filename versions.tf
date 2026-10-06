@@ -1,4 +1,6 @@
 terraform {
+  required_version = ">= 1.5"
+
   required_providers {
     immuta = {
       source  = "stu-johnstone/immuta"

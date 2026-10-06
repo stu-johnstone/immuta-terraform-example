@@ -1,6 +1,6 @@
-.PHONY: init fmt validate workspace plan apply
+.PHONY: init fmt validate workspace plan apply destroy
 
-ENVIRONMENT := non-prod
+ENVIRONMENT ?= non-prod
 
 init:
 	terraform init
@@ -20,3 +20,6 @@ plan: workspace
 
 apply: workspace
 	terraform apply
+
+destroy: workspace
+	terraform destroy

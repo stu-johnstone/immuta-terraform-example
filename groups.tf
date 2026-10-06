@@ -6,6 +6,34 @@ resource "immuta_group" "groups" {
   email       = each.value.email
 }
 
+locals {
+  # One entry per group attribute, keyed "<group>:<attribute>"
+  # (e.g. "engineering:Department").
+  group_attributes = {
+    for attribute in flatten([
+      for group_key, group in local.groups : [
+        for name, value in group.attributes : {
+          group = group_key
+          name  = name
+          value = value
+        }
+      ]
+    ]) : "${attribute.group}:${attribute.name}" => attribute
+  }
+
+  # One entry per group member, keyed "<group>:<user>" (e.g. "engineering:jane").
+  group_memberships = {
+    for membership in flatten([
+      for group_key, group in local.groups : [
+        for user_key in group.members : {
+          group = group_key
+          user  = user_key
+        }
+      ]
+    ]) : "${membership.group}:${membership.user}" => membership
+  }
+}
+
 resource "immuta_group_attribute" "attributes" {
   for_each = local.group_attributes
 
@@ -15,18 +43,8 @@ resource "immuta_group_attribute" "attributes" {
 }
 
 resource "immuta_group_user" "memberships" {
-  for_each = {
-    for membership in flatten([
-      for group, users in local.group_memberships : [
-        for user_id in users : {
-          key     = "${group}:${user_id}"
-          group   = group
-          user_id = user_id
-        }
-      ]
-    ]) : membership.key => membership
-  }
+  for_each = local.group_memberships
 
   group_id = immuta_group.groups[each.value.group].id
-  user_id  = each.value.user_id
+  user_id  = immuta_user.users[each.value.user].user_id
 }

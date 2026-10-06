@@ -17,9 +17,10 @@ The example manages common Immuta resources:
 - Group memberships
 - User and group attributes
 
-The configuration is deliberately data-driven. Example users, groups, domains,
-and attributes are defined in `locals.tf` and resources use `for_each`, making it
-easy to add additional examples without duplicating Terraform resources.
+The configuration is deliberately data-driven. Example domains, users and groups
+are defined in `locals.tf`; each user and group lists its own attributes, and
+each group lists its members by user key. Resources use `for_each`, so adding an
+example means adding an entry to `locals.tf` rather than a new resource.
 
 ## Environments
 
@@ -27,7 +28,7 @@ Terraform workspaces represent environments.
 
 `non-prod` is the default and is the only environment required for this example.
 The environment configuration, including the Immuta host, is defined in
-`locals.tf`.
+`provider.tf`.
 
 For example:
 

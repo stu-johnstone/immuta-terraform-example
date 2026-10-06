@@ -1,16 +1,10 @@
+# Example data. Add or change domains, groups and users here; the resources in
+# domains.tf, groups.tf and users.tf create one Immuta object per entry.
+#
+# Map keys (for example `jane` or `engineering`) are stable Terraform
+# identifiers. Renaming a key replaces the Immuta object, so treat keys as IDs.
+
 locals {
-  environments = {
-    non-prod = {
-      host = "https://i8xs1yfnyn2g81okkoa1zivf8e.hosted.immutacloud.com/" #"https://non-prod.immuta.example.com"
-    }
-
-    prod = {
-      host = "https://prod.immuta.example.com"
-    }
-  }
-
-  environment = local.environments[terraform.workspace]
-
   domains = {
     research = {
       name        = "Research"
@@ -28,81 +22,61 @@ locals {
     }
   }
 
-  groups = {
-    engineering = {
-      name        = "Engineering"
-      description = "Engineering department"
-      email       = "engineering@example.com"
-    }
-
-    research = {
-      name        = "Research"
-      description = "Research department"
-      email       = "research@example.com"
-    }
-  }
-
   users = {
     jane = {
       user_id     = "jane.doe@example.com"
       name        = "Jane Doe"
       email       = "jane.doe@example.com"
       permissions = ["CREATE_PROJECT"]
-      disabled    = false
+
+      # Attribute name => list of values.
+      attributes = {
+        Department = ["Finance"]
+        Region     = ["APAC", "EMEA"]
+      }
     }
 
     ada = {
-      user_id = "ada.lovelace@example.com"
-      name    = "Ada Lovelace"
-      permissions = []      
-      email   = "ada.lovelace@example.com"
+      user_id     = "ada.lovelace@example.com"
+      name        = "Ada Lovelace"
+      email       = "ada.lovelace@example.com"
+      permissions = []
+      attributes  = {}
     }
 
     alan = {
-      user_id = "alan.turing@example.com"
-      name    = "Alan Turing"
-      permissions = []      
-      email   = "alan.turing@example.com"
+      user_id     = "alan.turing@example.com"
+      name        = "Alan Turing"
+      email       = "alan.turing@example.com"
+      permissions = []
+      attributes  = {}
     }
   }
 
-  group_memberships = {
-    engineering = [
-      "jane.doe@example.com",
-      "alan.turing@example.com",
-    ]
+  groups = {
+    engineering = {
+      name        = "Engineering"
+      description = "Engineering department"
+      email       = "engineering@example.com"
 
-    research = [
-      "ada.lovelace@example.com",
-      "jane.doe@example.com",
-    ]
-  }
+      # Keys from local.users.
+      members = ["jane", "alan"]
 
-  group_attributes = {
-    engineering_department = {
-      group = "engineering"
-      name  = "Department"
-      value = "Engineering"
+      # Attribute name => value.
+      attributes = {
+        Department = "Engineering"
+      }
     }
 
-    research_department = {
-      group = "research"
-      name  = "Department"
-      value = "Research"
-    }
-  }
+    research = {
+      name        = "Research"
+      description = "Research department"
+      email       = "research@example.com"
+      members     = ["ada", "jane"]
 
-  user_attributes = {
-    jane_department = {
-      user   = "jane"
-      name   = "Department"
-      values = ["Finance"]
-    }
-
-    jane_regions = {
-      user   = "jane"
-      name   = "Region"
-      values = ["APAC", "EMEA"]
+      attributes = {
+        Department = "Research"
+      }
     }
   }
 }
