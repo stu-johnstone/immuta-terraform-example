@@ -16,6 +16,9 @@ The example manages common Immuta resources:
 - Groups
 - Group memberships
 - User and group attributes
+- Tags
+- Identifiers (regex, column name regex and dictionary)
+- Copying reference identifiers into a domain
 
 The configuration is deliberately data-driven. Example domains, users and groups
 are defined in `locals.tf`; each user and group lists its own attributes, and
@@ -64,11 +67,11 @@ No Terraform backend is configured; state is stored locally for simplicity.
     ├── AGENTS.md
     ├── Makefile
     ├── README.md
-    ├── versions.tf
-    ├── provider.tf
-    ├── locals.tf
-    ├── domains.tf
-    ├── groups.tf
-    ├── users.tf
-    ├── attributes.tf
-    └── outputs.tf
+    ├── versions.tf     # Terraform and provider versions
+    ├── provider.tf     # Environments and provider configuration
+    ├── locals.tf       # Example data
+    ├── domains.tf      # Domains and identifiers copied into them
+    ├── identifiers.tf  # Tags and identifiers
+    ├── users.tf        # Users and user attributes
+    ├── groups.tf       # Groups, group attributes and memberships
+    └── outputs.tf      # Outputs
