@@ -19,9 +19,11 @@ The example manages common Immuta resources:
 - Tags
 - Identifiers (regex, column name regex and dictionary)
 - Copying reference identifiers into a domain
+- Classification frameworks (tag sensitivity and classification rules)
+- A Databricks connection (structured so Snowflake and Trino can be added)
 
-The configuration is deliberately data-driven. Example domains, users and groups
-are defined in `locals.tf`; each user and group lists its own attributes, and
+The configuration is deliberately data-driven. Example domains, users, groups,
+tags, identifiers, frameworks and connections are defined in `locals.tf`; each user and group lists its own attributes, and
 each group lists its members by user key. Resources use `for_each`, so adding an
 example means adding an entry to `locals.tf` rather than a new resource.
 
@@ -47,7 +49,16 @@ The Immuta API key is supplied through:
 
     export IMMUTA_API_KEY="..."
 
-The API key must never be committed to the repository or printed by scripts.
+Connection secrets are supplied through Terraform variables set from
+`TF_VAR_` environment variables:
+
+    export TF_VAR_databricks_token="..."   # Databricks personal access token
+
+Secrets must never be committed to the repository or printed by scripts.
+
+Connections use `prevent_destroy`, because destroying a connection deletes
+every data object registered through it. `make destroy` fails until that is
+removed from `connections.tf`.
 
 The Immuta host is non-sensitive configuration and is defined per environment
 in `locals.tf`.
@@ -72,6 +83,8 @@ No Terraform backend is configured; state is stored locally for simplicity.
     ├── locals.tf       # Example data
     ├── domains.tf      # Domains and identifiers copied into them
     ├── identifiers.tf  # Tags and identifiers
+    ├── frameworks.tf   # Classification frameworks
+    ├── connections.tf  # Data platform connections and their secrets
     ├── users.tf        # Users and user attributes
     ├── groups.tf       # Groups, group attributes and memberships
     └── outputs.tf      # Outputs

@@ -1,0 +1,29 @@
+name: APAC Analytics Subscription
+  policyKey: subscription apac analytics
+  type: subscription
+
+  actions:
+    type: entitlements
+
+    entitlements:
+      operator: any
+
+      groups:
+        - APAC-Analysts
+
+      attributes:
+        - name: region
+          value: APAC
+
+    automaticSubscription: true
+    allowDiscovery: false
+
+    description: >
+      Automatically grant APAC analysts access to curated APAC data
+      when they are members of APAC-Analysts or have region=APAC.
+
+  circumstances:
+    - type: tags
+      tag: Business.Curated
+
+  staged: true

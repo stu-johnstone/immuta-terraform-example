@@ -1,0 +1,29 @@
+  name: Conditional Passport Masking
+  policyKey: data conditional passport masking
+  type: data
+
+  actions:
+    - rules:
+        - type: Masking
+
+          exceptions:
+            operator: any
+
+            attributes:
+              - name: data_access
+                value: pii_approved
+
+          config:
+            fields:
+              - type: columnTags
+                columnTag: Discovered.Passport
+
+            maskingConfig:
+              type: Constant
+              constant: REDACTED
+
+  circumstances:
+    - type: columnTags
+      columnTag: Discovered.Passport
+
+  staged: true

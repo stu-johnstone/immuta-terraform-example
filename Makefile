@@ -2,6 +2,10 @@
 
 ENVIRONMENT ?= non-prod
 
+# Set AUTO_APPROVE=true to skip the confirmation prompt on apply and destroy.
+AUTO_APPROVE ?= false
+APPROVE_FLAG = $(if $(filter true,$(AUTO_APPROVE)),-auto-approve)
+
 init:
 	terraform init
 

@@ -1,0 +1,22 @@
+ name: Mask APAC PII
+  policyKey: data mask apac pii
+  type: data
+
+  actions:
+    - rules:
+        - type: Masking
+
+          config:
+            fields:
+              - type: columnTags
+                columnTag: Discovered.PII
+
+            maskingConfig:
+              type: Constant
+              constant: REDACTED
+
+  circumstances:
+    - type: columnTags
+      columnTag: Discovered.PII
+
+  staged: true

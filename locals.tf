@@ -31,8 +31,40 @@ locals {
   # Key => fully qualified tag name. Tags are hierarchical, and Immuta creates
   # missing parents (here "Discovered").
   tags = {
-    credit_card   = "Discovered.Credit card"
-    primary_color = "Discovered.Primary color"
+    credit_card            = "Discovered.Credit card"
+    primary_color          = "Discovered.Primary color"
+    employee_name          = "Discovered.Employee Name"
+    internal_employee_data = "HR Framework.Internal Employee Data"
+  }
+
+  # Classification frameworks apply a tag to columns based on tags already
+  # found on the column, its neighbouring columns or its data source.
+  frameworks = {
+    hr = {
+      short_name  = "HR Information v2"
+      name        = "HR Information Framework v2"
+      description = "Finds internal employee information and tags it for HR."
+      active      = true
+
+      # Tags used by the framework (keys from local.tags) => confidentiality
+      # sensitivity: 0 non-sensitive, 1 sensitive, 2 highly sensitive, or null
+      # for none.
+      tags = {
+        internal_employee_data = 1
+      }
+
+      # Each rule applies `classification_tag` when one of its criteria tags
+      # is found. Criteria are `column_tags` (same column),
+      # `neighbor_column_tags` (any column in the data source) and
+      # `table_tags` (the data source); omit the ones a rule does not use.
+      rules = {
+        employee_data = {
+          name                 = "Employee data"
+          classification_tag   = "internal_employee_data"
+          neighbor_column_tags = ["employee_name"]
+        }
+      }
+    }
   }
 
   # Identifiers apply tags (keys from local.tags) to matching columns.
@@ -78,6 +110,51 @@ locals {
       regex       = "(red|green|blue)"
       tags        = ["primary_color"]
       domain      = "finance"
+    }
+  }
+
+  # Connections to data platforms. `configuration` is the connections API
+  # registration payload, using its key names, without the credential.
+  # `credential` holds only the non-secret credential fields; the secret is
+  # added from a sensitive variable in connections.tf.
+  #
+  # Replace the placeholder values with your own. Changing a connection's key
+  # or technology, or a setting the API cannot update (for Databricks: host,
+  # port, immutaSystemCatalog, excludeGroupPattern), replaces the connection.
+  connections = {
+    databricks = {
+      technology = "Databricks"
+
+      credential = {
+        authenticationType = "Token"
+      }
+
+      configuration = {
+        clientConfiguration = {
+          host                = "dbc-00000000-0000.cloud.databricks.com"
+          path                = "/sql/1.0/warehouses/0000000000000000"
+          port                = 443
+          immutaSystemCatalog = "immuta_system"
+        }
+        policyConfiguration = {
+          excludeGroupPattern = "admins"
+        }
+        auditConfiguration = {
+          enabled      = true
+          workspaceIds = ["0000000000000000"]
+        }
+        dataObjectSync = {
+          enabled   = true
+          startTime = 0
+          schedule  = "EVERY_24_HOURS"
+        }
+        syncOnCreate = true
+        dataObjectDefaults = {
+          syncPolicy = false
+          # Immuta user profile IDs.
+          owners = [{ type = "USER", id = 2 }]
+        }
+      }
     }
   }
 
