@@ -1,0 +1,10 @@
+# Settings for the non-prod environment. Copy to non-prod.tfvars (gitignored)
+# and set your values; the Makefile passes environments/$ENVIRONMENT.tfvars
+# with -var-file. Never put secrets here: the Databricks token comes from the
+# TF_VAR_databricks_token environment variable.
+
+databricks_host = "dbc-00000000-0000.cloud.databricks.com"
+databricks_path = "/sql/1.0/warehouses/0000000000000000"
+
+# An existing Immuta user who owns the data objects connections register.
+data_owner_email = "data.owner@example.com"

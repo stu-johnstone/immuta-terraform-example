@@ -49,6 +49,14 @@ The Immuta API key is supplied through:
 
     export IMMUTA_API_KEY="..."
 
+Non-secret settings you do not want to commit, such as the Databricks host and
+SQL warehouse path and the email of the user who owns connection data objects,
+go in a per-environment variables file,
+`environments/<environment>.tfvars`. These files are gitignored, and the
+Makefile passes the one matching `ENVIRONMENT` with `-var-file`:
+
+    cp environments/non-prod.tfvars.example environments/non-prod.tfvars
+
 Connection secrets are supplied through Terraform variables set from
 `TF_VAR_` environment variables:
 
@@ -70,6 +78,9 @@ in `locals.tf`.
     make plan
     make apply
 
+`apply` and `destroy` ask for confirmation. Set `AUTO_APPROVE=true` to skip
+it, for example `AUTO_APPROVE=true make apply`.
+
 No Terraform backend is configured; state is stored locally for simplicity.
 
 ## Project Structure
@@ -84,7 +95,8 @@ No Terraform backend is configured; state is stored locally for simplicity.
     ├── domains.tf      # Domains and identifiers copied into them
     ├── identifiers.tf  # Tags and identifiers
     ├── frameworks.tf   # Classification frameworks
-    ├── connections.tf  # Data platform connections and their secrets
+    ├── connections.tf  # Data platform connections and their variables
+    ├── environments/   # <environment>.tfvars settings (gitignored) and templates
     ├── users.tf        # Users and user attributes
     ├── groups.tf       # Groups, group attributes and memberships
     └── outputs.tf      # Outputs

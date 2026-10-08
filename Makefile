@@ -2,6 +2,9 @@
 
 ENVIRONMENT ?= non-prod
 
+# Per-environment settings that are not committed (see environments/).
+VAR_FILE = environments/$(ENVIRONMENT).tfvars
+
 # Set AUTO_APPROVE=true to skip the confirmation prompt on apply and destroy.
 AUTO_APPROVE ?= false
 APPROVE_FLAG = $(if $(filter true,$(AUTO_APPROVE)),-auto-approve)
@@ -20,10 +23,10 @@ workspace: init
 		terraform workspace new $(ENVIRONMENT)
 
 plan: workspace
-	terraform plan
+	terraform plan -var-file=$(VAR_FILE)
 
 apply: workspace
-	terraform apply
+	terraform apply -var-file=$(VAR_FILE) $(APPROVE_FLAG)
 
 destroy: workspace
-	terraform destroy
+	terraform destroy -var-file=$(VAR_FILE) $(APPROVE_FLAG)

@@ -131,16 +131,17 @@ locals {
 
       configuration = {
         clientConfiguration = {
-          host                = "dbc-00000000-0000.cloud.databricks.com"
-          path                = "/sql/1.0/warehouses/0000000000000000"
+          # From environments/<environment>.tfvars, which is not committed.
+          host                = var.databricks_host
+          path                = var.databricks_path
           port                = 443
-          immutaSystemCatalog = "immuta_system"
+          immutaSystemCatalog = "immuta_stu_j"
         }
         policyConfiguration = {
           excludeGroupPattern = "admins"
         }
         auditConfiguration = {
-          enabled      = true
+          enabled      = false
           workspaceIds = ["0000000000000000"]
         }
         dataObjectSync = {
@@ -149,10 +150,10 @@ locals {
           schedule  = "EVERY_24_HOURS"
         }
         syncOnCreate = true
+        # owners is added in connections.tf from data.immuta_user.data_owner,
+        # so no profile ID is hard-coded.
         dataObjectDefaults = {
           syncPolicy = false
-          # Immuta user profile IDs.
-          owners = [{ type = "USER", id = 2 }]
         }
       }
     }
