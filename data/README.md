@@ -23,12 +23,12 @@ Data is split by kind, so only four connectors are needed:
 
 | Platform | Data | Layout |
 |---|---|---|
-| Databricks | Financial Services and Utilities operational data | catalog per company, schema per business |
+| Databricks | Financial Services and Utilities operational data | a catalog you choose per company, schema per business |
 | Snowflake | Health and Manufacturing operational data | database per company, schema per business |
 | Redshift | HR for every company | database `hr`, schema per company |
 | BigQuery | Marketing for every company | dataset `<company>_marketing` |
 
-For example, `harbourstone.commercial_banking.gold_risk_profile` (Databricks),
+For example, `<your catalog>.commercial_banking.gold_risk_profile` (Databricks),
 `hr.harbourstone.silver_employees` (Redshift) and
 `harbourstone_marketing.gold_campaign_performance` (BigQuery).
 
@@ -46,20 +46,26 @@ data/
 ```
 
 Each `.sql` file is self-contained: paste it into the platform's SQL editor
-and run it top to bottom. It creates the catalog, database, schemas or
-datasets it needs, then the tables, and can be re-run; tables are replaced
-each time. Comments explain every step and every table.
+and run it top to bottom. It creates the database, schemas or datasets it
+needs (Databricks uses the catalog you select), then the tables, and can be
+re-run; tables are replaced each time. Comments explain every step and every
+table.
 
 | Platform | Before running |
 |---|---|
-| Databricks | Needs Unity Catalog and permission to create catalogs. If `CREATE CATALOG` fails because the metastore has no storage root, add `MANAGED LOCATION '<path>'`. |
+| Databricks | Needs Unity Catalog. Select your own catalog first (the catalog picker in the SQL editor or DBeaver, or `USE CATALOG <your catalog>;`), so it works in a shared workspace. The script stops if `main`, `workspace`, `hive_metastore`, `system` or `samples` is selected. |
 | Snowflake | Use a role that can create databases and select a warehouse. |
 | Redshift | Run `CREATE DATABASE hr;` once, then connect to `hr` and run the file. |
-| BigQuery | Select the project in the console. Datasets are created in `australia-southeast1`; change it in the file if needed. |
+| BigQuery | Select the project in the console. Datasets are created in the project's default location. |
 
-The Databricks file for a company is about 1.3 MB. If the editor struggles
-to paste it, run it as a file instead (for example, import it as a SQL file
-or run it with the Databricks CLI).
+The Databricks file for a company is about 1.3 MB, which a browser editor
+may struggle to paste. A desktop SQL client such as
+[DBeaver](https://dbeaver.io) (free Community edition) is easier: it connects
+to all four platforms, opens the file and runs it statement by statement
+(Execute SQL Script, Alt+X). For Databricks, use the host, HTTP path and
+personal access token from the Terraform setup (see the main README).
+DBeaver keeps the token in its own local settings; never commit or share
+its connection configuration.
 
 ## Medallion layers
 

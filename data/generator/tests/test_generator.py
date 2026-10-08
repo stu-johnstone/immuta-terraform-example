@@ -40,9 +40,29 @@ def test_runs_end_to_end(script):
 def test_parses_for_platform(script):
     dialect = DIALECTS[script.platform]
     for statement in statements(script, dialect):
-        if statement.startswith(("CREATE CATALOG", "COMMENT ON")):
+        if statement.startswith("COMMENT ON"):
             continue  # not modelled by sqlglot
         sqlglot.parse_one(statement, read=script.platform)
+
+
+@pytest.mark.parametrize("script", [s for s in SCRIPTS if s.platform == "databricks"], ids=lambda s: s.path)
+def test_databricks_uses_current_catalog(script):
+    """Each person has their own catalog in a shared workspace, so scripts
+    never name a catalog, and stop if a shared or built-in one is selected."""
+    sql = statements(script, DIALECTS["databricks"])
+    assert sql[0].startswith("SELECT assert_true(current_catalog() NOT IN (")
+    assert "'main'" in sql[0]
+    for statement in sql:
+        assert not statement.startswith("CREATE CATALOG")
+        for schema in script.schemas:
+            assert f"{script.container}.{schema.name}" not in statement
+
+
+@pytest.mark.parametrize("script", [s for s in SCRIPTS if s.platform == "bigquery"], ids=lambda s: s.path)
+def test_bigquery_casts_are_not_parameterized(script):
+    """BigQuery rejects types such as NUMERIC(18,2) in CAST; sqlglot accepts them."""
+    for statement in statements(script, DIALECTS["bigquery"]):
+        assert not re.search(r"\bAS\s+(BIG)?NUMERIC\s*\(", statement), statement[:200]
 
 
 @pytest.mark.parametrize("script", SCRIPTS, ids=IDS)

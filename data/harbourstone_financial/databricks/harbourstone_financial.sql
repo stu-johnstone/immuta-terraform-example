@@ -12,24 +12,26 @@
 
 -- ----------------------------------------------------------------------------
 -- Setup
--- Needs Unity Catalog. If CREATE CATALOG fails because the metastore has no
--- storage root, add MANAGED LOCATION '<your cloud storage path>' to it.
+-- Needs Unity Catalog. Tables are created in the current catalog: select
+-- your own catalog first (the catalog picker in the SQL editor or DBeaver,
+-- or USE CATALOG <your catalog>), for example harbourstone. The first
+-- statement stops the script if a shared or built-in catalog is selected.
 -- ----------------------------------------------------------------------------
 
-CREATE CATALOG IF NOT EXISTS harbourstone
-COMMENT 'Harbourstone Financial Group';
+SELECT assert_true(current_catalog() NOT IN ('hive_metastore', 'main', 'samples', 'system', 'workspace'),
+  'Select your own catalog (USE CATALOG <your catalog>) before running this script.');
 
-CREATE SCHEMA IF NOT EXISTS harbourstone.retail_banking
+CREATE SCHEMA IF NOT EXISTS retail_banking
 COMMENT 'Harbourstone Retail Banking';
 
-CREATE SCHEMA IF NOT EXISTS harbourstone.commercial_banking
+CREATE SCHEMA IF NOT EXISTS commercial_banking
 COMMENT 'Harbourstone Commercial Banking';
 
-CREATE SCHEMA IF NOT EXISTS harbourstone.insurance
+CREATE SCHEMA IF NOT EXISTS insurance
 COMMENT 'Harbourstone Insurance';
 
 -- ============================================================================
--- Harbourstone Retail Banking (harbourstone.retail_banking)
+-- Harbourstone Retail Banking (retail_banking)
 -- Personal banking: customers, identity checks, deposit accounts,
 -- transactions, cards, home loans, customer contacts, complaints and anti-
 -- money laundering alerts. Sources: core banking (CBS), card management,
@@ -44,7 +46,7 @@ COMMENT 'Harbourstone Insurance';
 -- (online) branch.
 --   Rows: 18
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_branches (
+CREATE OR REPLACE TABLE retail_banking.bronze_branches (
   branch_id STRING,
   branch_name STRING,
   suburb STRING,
@@ -57,7 +59,7 @@ CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_branches (
 )
 COMMENT 'Branches from the core banking system. BR900 is the digital (online) branch.';
 
-INSERT INTO harbourstone.retail_banking.bronze_branches (branch_id, branch_name, suburb, state, postcode, country, opened_date, _source_system, _batch_id) VALUES
+INSERT INTO retail_banking.bronze_branches (branch_id, branch_name, suburb, state, postcode, country, opened_date, _source_system, _batch_id) VALUES
   ('BR001', 'Sydney CBD', 'Sydney', 'NSW', '2000', 'AU', date_sub(current_date(), 1825), 'CBS', 'cbs-ref'),
   ('BR002', 'Parramatta', 'Parramatta', 'NSW', '2150', 'AU', date_sub(current_date(), 1922), 'CBS', 'cbs-ref'),
   ('BR003', 'Chatswood', 'Chatswood', 'NSW', '2067', 'AU', date_sub(current_date(), 2019), 'CBS', 'cbs-ref'),
@@ -91,7 +93,7 @@ INSERT INTO harbourstone.retail_banking.bronze_branches (branch_id, branch_name,
 --     segment: MASS, AFFLUENT or PRIVATE
 --   Rows: 250
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_customers (
+CREATE OR REPLACE TABLE retail_banking.bronze_customers (
   customer_id STRING,
   first_name STRING COMMENT 'Person name',
   last_name STRING COMMENT 'Person name',
@@ -110,7 +112,7 @@ CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_customers (
 )
 COMMENT 'Retail customers from the core banking system. Raw values: name casing, status and country spellings vary.';
 
-INSERT INTO harbourstone.retail_banking.bronze_customers (customer_id, first_name, last_name, date_of_birth, gender, email, mobile_phone, tax_file_number, home_branch_id, customer_since, country, segment, customer_status, _source_system, _batch_id) VALUES
+INSERT INTO retail_banking.bronze_customers (customer_id, first_name, last_name, date_of_birth, gender, email, mobile_phone, tax_file_number, home_branch_id, customer_since, country, segment, customer_status, _source_system, _batch_id) VALUES
   ('C100001', 'James', 'Williams', DATE '1974-08-25', 'M', 'james.williams76@example.net', '0491 570 640', NULL, 'BR002', date_sub(current_date(), 4159), 'AU', 'AFFLUENT', 'Active', 'CBS', 'cbs-0412'),
   ('C100002', 'Arjun', 'Silva', DATE '1964-06-04', 'X', 'arjun.silva46@example.com', '0491 570 484', '822040234', 'BR012', date_sub(current_date(), 1812), 'Australia', 'MASS', 'Active', 'CBS', 'cbs-0412'),
   ('C100003', 'Mei', 'Harris', DATE '1959-07-26', 'F', 'mei.harris20@example.com', '0491 570 318', '152870197', 'BR900', date_sub(current_date(), 5403), 'AU', 'MASS', 'ACTIVE', 'CBS', 'cbs-0412'),
@@ -368,7 +370,7 @@ INSERT INTO harbourstone.retail_banking.bronze_customers (customer_id, first_nam
 --     address_line: PII: street address
 --   Rows: 340
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_customer_addresses (
+CREATE OR REPLACE TABLE retail_banking.bronze_customer_addresses (
   address_id STRING,
   customer_id STRING,
   address_type STRING,
@@ -384,7 +386,7 @@ CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_customer_addresses (
 )
 COMMENT 'Customer address history; valid_to is empty for current addresses.';
 
-INSERT INTO harbourstone.retail_banking.bronze_customer_addresses (address_id, customer_id, address_type, address_line, suburb, state, postcode, country, valid_from, valid_to, _source_system, _batch_id) VALUES
+INSERT INTO retail_banking.bronze_customer_addresses (address_id, customer_id, address_type, address_line, suburb, state, postcode, country, valid_from, valid_to, _source_system, _batch_id) VALUES
   ('ADR000001', 'C100001', 'RESIDENTIAL', 'Unit 1/134 George Crescent', 'Melbourne', 'VIC', '3000', 'AU', date_sub(current_date(), 4159), NULL, 'CBS', 'cbs-0412'),
   ('ADR000002', 'C100001', 'POSTAL', 'PO Box 9126', 'Melbourne', 'VIC', '3000', 'AU', date_sub(current_date(), 4159), NULL, 'CBS', 'cbs-0412'),
   ('ADR000003', 'C100002', 'RESIDENTIAL', '214 Beach Crescent', 'Adelaide', 'SA', '5000', 'AU', date_sub(current_date(), 545), NULL, 'CBS', 'cbs-0412'),
@@ -733,7 +735,7 @@ INSERT INTO harbourstone.retail_banking.bronze_customer_addresses (address_id, c
 --       national ID number
 --   Rows: 297
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_kyc_documents (
+CREATE OR REPLACE TABLE retail_banking.bronze_kyc_documents (
   document_id STRING,
   customer_id STRING,
   document_type STRING,
@@ -747,7 +749,7 @@ CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_kyc_documents (
 )
 COMMENT 'Identity documents checked when customers were onboarded, from the KYC vendor.';
 
-INSERT INTO harbourstone.retail_banking.bronze_kyc_documents (document_id, customer_id, document_type, document_number, issuing_country, expiry_date, verified_at, verification_status, _source_system, _batch_id) VALUES
+INSERT INTO retail_banking.bronze_kyc_documents (document_id, customer_id, document_type, document_number, issuing_country, expiry_date, verified_at, verification_status, _source_system, _batch_id) VALUES
   ('KYC000001', 'C100001', 'DRIVERS_LICENCE', '79556254', 'AU', date_add(current_date(), 2000), CAST(date_sub(current_date(), 206) AS TIMESTAMP) + INTERVAL 585 MINUTES, 'VERIFIED', 'KYC_VENDOR', 'kyc-0412'),
   ('KYC000002', 'C100002', 'PASSPORT', 'PT4302001', 'AU', date_add(current_date(), 22), CAST(date_sub(current_date(), 895) AS TIMESTAMP) + INTERVAL 550 MINUTES, 'PENDING', 'KYC_VENDOR', 'kyc-0412'),
   ('KYC000003', 'C100003', 'PASSPORT', 'PJ7208351', 'AU', date_add(current_date(), 2259), CAST(date_sub(current_date(), 49) AS TIMESTAMP) + INTERVAL 1248 MINUTES, 'VERIFIED', 'KYC_VENDOR', 'kyc-0412'),
@@ -1055,7 +1057,7 @@ INSERT INTO harbourstone.retail_banking.bronze_kyc_documents (document_id, custo
 --     iban: Financial: IBAN (London accounts)
 --   Rows: 455
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_accounts (
+CREATE OR REPLACE TABLE retail_banking.bronze_accounts (
   account_id STRING,
   customer_id STRING,
   product_code STRING COMMENT 'TXN, SAV or TD',
@@ -1073,7 +1075,7 @@ CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_accounts (
 )
 COMMENT 'Deposit accounts (everyday, savings and term deposit) from the core banking system.';
 
-INSERT INTO harbourstone.retail_banking.bronze_accounts (account_id, customer_id, product_code, bsb, account_number, iban, currency, current_balance, interest_rate, opened_date, closed_date, account_status, _source_system, _batch_id) VALUES
+INSERT INTO retail_banking.bronze_accounts (account_id, customer_id, product_code, bsb, account_number, iban, currency, current_balance, interest_rate, opened_date, closed_date, account_status, _source_system, _batch_id) VALUES
   ('A2000001', 'C100001', 'TXN', '917-444', '210270243', NULL, 'AUD', 0.00, 0.00, date_sub(current_date(), 3501), date_sub(current_date(), 952), 'CLOSED', 'CBS', 'cbs-0412'),
   ('A2000002', 'C100001', 'SAV', '917-690', '708253489', NULL, 'AUD', 7577.16, 4.57, date_sub(current_date(), 3350), NULL, 'ACTIVE', 'CBS', 'cbs-0412'),
   ('A2000003', 'C100002', 'TXN', '917-470', '312879555', NULL, 'AUD', 6807.08, 0.00, date_sub(current_date(), 1067), NULL, 'DORMANT', 'CBS', 'cbs-0412'),
@@ -1536,7 +1538,7 @@ INSERT INTO harbourstone.retail_banking.bronze_accounts (account_id, customer_id
 --     amount: Always positive; the type gives the direction
 --   Rows: 1010
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_transactions (
+CREATE OR REPLACE TABLE retail_banking.bronze_transactions (
   txn_id STRING,
   account_id STRING,
   txn_ts TIMESTAMP,
@@ -1551,7 +1553,7 @@ CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_transactions (
 )
 COMMENT 'Account transactions for the last 120 days, including today. The extract re-sends a few rows.';
 
-INSERT INTO harbourstone.retail_banking.bronze_transactions (txn_id, account_id, txn_ts, txn_type, amount, currency, channel, merchant_name, description, _source_system, _batch_id) VALUES
+INSERT INTO retail_banking.bronze_transactions (txn_id, account_id, txn_ts, txn_type, amount, currency, channel, merchant_name, description, _source_system, _batch_id) VALUES
   ('T90000001', 'A2000175', CAST(date_sub(current_date(), 20) AS TIMESTAMP) + INTERVAL 746 MINUTES, 'DEPOSIT', 9640.31, 'AUD', 'BRANCH', NULL, 'CASH DEPOSIT HOBART', 'CBS', 'cbs-0412'),
   ('T90000002', 'A2000175', CAST(date_sub(current_date(), 18) AS TIMESTAMP) + INTERVAL 789 MINUTES, 'DEPOSIT', 9020.19, 'AUD', 'BRANCH', NULL, 'CASH DEPOSIT HOBART', 'CBS', 'cbs-0412'),
   ('T90000003', 'A2000175', CAST(date_sub(current_date(), 16) AS TIMESTAMP) + INTERVAL 579 MINUTES, 'DEPOSIT', 9104.16, 'AUD', 'BRANCH', NULL, 'CASH DEPOSIT HOBART', 'CBS', 'cbs-0412'),
@@ -2570,7 +2572,7 @@ INSERT INTO harbourstone.retail_banking.bronze_transactions (txn_id, account_id,
 --     expiry_month: PCI: MM/YY
 --   Rows: 286
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_cards (
+CREATE OR REPLACE TABLE retail_banking.bronze_cards (
   card_id STRING,
   account_id STRING,
   card_number STRING COMMENT 'PCI: full card number (test ranges, Luhn-valid)',
@@ -2585,7 +2587,7 @@ CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_cards (
 )
 COMMENT 'Debit and credit cards from the card management system.';
 
-INSERT INTO harbourstone.retail_banking.bronze_cards (card_id, account_id, card_number, cardholder_name, card_type, credit_limit, expiry_month, card_status, issued_date, _source_system, _batch_id) VALUES
+INSERT INTO retail_banking.bronze_cards (card_id, account_id, card_number, cardholder_name, card_type, credit_limit, expiry_month, card_status, issued_date, _source_system, _batch_id) VALUES
   ('CRD000001', 'A2000001', '4111110282238380', 'J WILLIAMS', 'DEBIT', NULL, '07/30', 'BLOCKED', date_sub(current_date(), 1134), 'CARDS', 'cards-0412'),
   ('CRD000002', 'A2000003', '4111113069201290', 'A SILVA', 'DEBIT', NULL, '10/29', 'ACTIVE', date_sub(current_date(), 191), 'CARDS', 'cards-0412'),
   ('CRD000003', 'A2000005', '4111118396532614', 'M HARRIS', 'CREDIT', 17000, '03/29', 'ACTIVE', date_sub(current_date(), 108), 'CARDS', 'cards-0412'),
@@ -2876,7 +2878,7 @@ INSERT INTO harbourstone.retail_banking.bronze_cards (card_id, account_id, card_
 -- bronze_home_loans: Home loans from the lending system.
 --   Rows: 100
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_home_loans (
+CREATE OR REPLACE TABLE retail_banking.bronze_home_loans (
   loan_id STRING,
   customer_id STRING,
   property_postcode STRING,
@@ -2893,7 +2895,7 @@ CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_home_loans (
 )
 COMMENT 'Home loans from the lending system.';
 
-INSERT INTO harbourstone.retail_banking.bronze_home_loans (loan_id, customer_id, property_postcode, property_value, original_loan_amount, current_balance, interest_rate, rate_type, term_years, start_date, days_in_arrears, _source_system, _batch_id) VALUES
+INSERT INTO retail_banking.bronze_home_loans (loan_id, customer_id, property_postcode, property_value, original_loan_amount, current_balance, interest_rate, rate_type, term_years, start_date, days_in_arrears, _source_system, _batch_id) VALUES
   ('HL00001', 'C100211', '6027', 2130000, 1576200, 1477741.48, 5.82, 'FIXED', 25, date_sub(current_date(), 912), 0, 'LENDING', 'lending-0412'),
   ('HL00002', 'C100015', '5000', 820000, 574000, 410213.42, 7.08, 'FIXED', 30, date_sub(current_date(), 4166), 0, 'LENDING', 'lending-0412'),
   ('HL00003', 'C100018', '8011', 600000, 330000, 236741.10, 6.85, 'VARIABLE', 25, date_sub(current_date(), 4126), 0, 'LENDING', 'lending-0412'),
@@ -3003,7 +3005,7 @@ INSERT INTO harbourstone.retail_banking.bronze_home_loans (loan_id, customer_id,
 --       numbers and dates of birth
 --   Rows: 300
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_crm_interactions (
+CREATE OR REPLACE TABLE retail_banking.bronze_crm_interactions (
   interaction_id STRING,
   customer_id STRING,
   interaction_ts TIMESTAMP,
@@ -3017,7 +3019,7 @@ CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_crm_interactions (
 )
 COMMENT 'Customer contacts logged in the CRM, with the staff member\'s notes.';
 
-INSERT INTO harbourstone.retail_banking.bronze_crm_interactions (interaction_id, customer_id, interaction_ts, channel, staff_employee_id, topic, notes, sentiment, _source_system, _batch_id) VALUES
+INSERT INTO retail_banking.bronze_crm_interactions (interaction_id, customer_id, interaction_ts, channel, staff_employee_id, topic, notes, sentiment, _source_system, _batch_id) VALUES
   ('INT000001', 'C100106', CAST(date_sub(current_date(), 174) AS TIMESTAMP) + INTERVAL 729 MINUTES, 'PHONE', 'HFG00113', 'Term deposit maturity', 'Term deposit maturing next week. Customer wants to roll over 500 dollars for 12 months.', 'POSITIVE', 'CRM', 'crm-0412'),
   ('INT000002', 'C100136', CAST(date_sub(current_date(), 120) AS TIMESTAMP) + INTERVAL 1055 MINUTES, 'PHONE', 'HFG00115', 'Fee query', 'Customer queried a monthly account fee of 10 dollars. Explained the fee waiver criteria and refunded it as a one-off courtesy.', 'NEUTRAL', 'CRM', 'crm-0412'),
   ('INT000003', 'C100187', CAST(date_sub(current_date(), 7) AS TIMESTAMP) + INTERVAL 890 MINUTES, 'PHONE', 'HFG00164', 'Card lost or stolen', 'Customer called to report card ending 3185 lost in Te Aro. Card blocked and replacement sent to 232 Bridge Avenue, Te Aro WGN 6011. Identity verified with date of birth 21/03/1994.', 'NEGATIVE', 'CRM', 'crm-0412'),
@@ -3325,7 +3327,7 @@ INSERT INTO harbourstone.retail_banking.bronze_crm_interactions (interaction_id,
 --     description: Free text: the customer's complaint
 --   Rows: 110
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_complaints (
+CREATE OR REPLACE TABLE retail_banking.bronze_complaints (
   complaint_id STRING,
   customer_id STRING,
   received_date DATE,
@@ -3339,7 +3341,7 @@ CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_complaints (
 )
 COMMENT 'Customer complaints from the CRM, in the customer\'s words.';
 
-INSERT INTO harbourstone.retail_banking.bronze_complaints (complaint_id, customer_id, received_date, category, description, complaint_status, resolved_date, compensation_amount, _source_system, _batch_id) VALUES
+INSERT INTO retail_banking.bronze_complaints (complaint_id, customer_id, received_date, category, description, complaint_status, resolved_date, compensation_amount, _source_system, _batch_id) VALUES
   ('CMP00001', 'C100023', date_sub(current_date(), 365), 'FEES', 'I was charged 60 dollars in overdrawn fees in one week. Nobody told me about these fees and I want them refunded.', 'RESOLVED', date_sub(current_date(), 327), NULL, 'CRM', 'crm-0412'),
   ('CMP00002', 'C100024', date_sub(current_date(), 288), 'FEES', 'I was charged 45 dollars in overdrawn fees in one week. Nobody told me about these fees and I want them refunded.', 'RESOLVED', date_sub(current_date(), 271), NULL, 'CRM', 'crm-0412'),
   ('CMP00003', 'C100010', date_sub(current_date(), 336), 'PRIVACY', 'A letter with my account details was sent to my old address at 215 Flinders Street, Bukit Timah even though I updated it months ago.', 'RESOLVED', date_sub(current_date(), 303), NULL, 'CRM', 'crm-0412'),
@@ -3458,7 +3460,7 @@ INSERT INTO harbourstone.retail_banking.bronze_complaints (complaint_id, custome
 --     analyst_notes: Free text: financial crime investigation notes
 --   Rows: 80
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_aml_alerts (
+CREATE OR REPLACE TABLE retail_banking.bronze_aml_alerts (
   alert_id STRING,
   customer_id STRING,
   txn_id STRING,
@@ -3472,7 +3474,7 @@ CREATE OR REPLACE TABLE harbourstone.retail_banking.bronze_aml_alerts (
 )
 COMMENT 'Anti-money laundering alerts raised by the transaction monitoring engine.';
 
-INSERT INTO harbourstone.retail_banking.bronze_aml_alerts (alert_id, customer_id, txn_id, alert_ts, rule_code, risk_score, alert_status, analyst_notes, _source_system, _batch_id) VALUES
+INSERT INTO retail_banking.bronze_aml_alerts (alert_id, customer_id, txn_id, alert_ts, rule_code, risk_score, alert_status, analyst_notes, _source_system, _batch_id) VALUES
   ('AML00001', 'C100095', 'T90000003', CAST(date_sub(current_date(), 16) AS TIMESTAMP) + INTERVAL 249 MINUTES, 'STRUCTURING', 73, 'CLOSED_FALSE_POSITIVE', 'Three cash deposits just under 10,000 dollars at Hobart within a week. Pattern consistent with structuring to avoid threshold reporting.', 'AML_ENGINE', 'aml-0412'),
   ('AML00002', 'C100135', 'T90000006', CAST(date_sub(current_date(), 56) AS TIMESTAMP) + INTERVAL 71 MINUTES, 'STRUCTURING', 98, 'REPORTED', 'Three cash deposits just under 10,000 dollars at Sydney CBD within a week. Pattern consistent with structuring to avoid threshold reporting.', 'AML_ENGINE', 'aml-0412'),
   ('AML00003', 'C100110', 'T90000009', CAST(date_sub(current_date(), 39) AS TIMESTAMP) + INTERVAL 108 MINUTES, 'STRUCTURING', 88, 'UNDER_REVIEW', 'Three cash deposits just under 10,000 dollars at Geelong within a week. Pattern consistent with structuring to avoid threshold reporting.', 'AML_ENGINE', 'aml-0412'),
@@ -3560,21 +3562,21 @@ INSERT INTO harbourstone.retail_banking.bronze_aml_alerts (alert_id, customer_id
 
 -- silver_branches: Branches with region.
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.silver_branches
+CREATE OR REPLACE TABLE retail_banking.silver_branches
 COMMENT 'Branches with region.'
 AS
 SELECT branch_id, branch_name, suburb, state, postcode, country, CASE WHEN country IN ('AU', 'NZ', 'SG', 'JP', 'IN', 'MY', 'ID', 'HK') THEN 'APAC' WHEN country IN ('GB', 'IE', 'DE', 'FR', 'NL', 'AE', 'ZA') THEN 'EMEA' WHEN country IN ('US', 'CA', 'MX', 'BR') THEN 'AMER' ELSE 'UNKNOWN' END AS region, opened_date
-FROM harbourstone.retail_banking.bronze_branches;
+FROM retail_banking.bronze_branches;
 
 -- silver_customers: Customers with tidied names and emails, current address,
 -- age band, clean country code and region.
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.silver_customers
+CREATE OR REPLACE TABLE retail_banking.silver_customers
 COMMENT 'Customers with tidied names and emails, current address, age band, clean country code and region.'
 AS
 WITH current_address AS (
   SELECT customer_id, address_line, suburb, state, postcode
-  FROM harbourstone.retail_banking.bronze_customer_addresses
+  FROM retail_banking.bronze_customer_addresses
   WHERE address_type = 'RESIDENTIAL' AND valid_to IS NULL
 ),
 base AS (
@@ -3598,9 +3600,9 @@ base AS (
     c.segment,
     UPPER(TRIM(c.customer_status)) AS customer_status,
     c.customer_since
-  FROM harbourstone.retail_banking.bronze_customers c
+  FROM retail_banking.bronze_customers c
   LEFT JOIN current_address a ON a.customer_id = c.customer_id
-  LEFT JOIN harbourstone.retail_banking.silver_branches b ON b.branch_id = c.home_branch_id
+  LEFT JOIN retail_banking.silver_branches b ON b.branch_id = c.home_branch_id
 )
 SELECT
   base.*,
@@ -3611,7 +3613,7 @@ FROM base;
 -- silver_kyc_documents: Identity documents with an expiry flag and the
 -- customer's region.
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.silver_kyc_documents
+CREATE OR REPLACE TABLE retail_banking.silver_kyc_documents
 COMMENT 'Identity documents with an expiry flag and the customer\'s region.'
 AS
 SELECT
@@ -3626,13 +3628,13 @@ SELECT
   k.verification_status,
   c.country,
   c.region
-FROM harbourstone.retail_banking.bronze_kyc_documents k
-JOIN harbourstone.retail_banking.silver_customers c ON c.customer_id = k.customer_id;
+FROM retail_banking.bronze_kyc_documents k
+JOIN retail_banking.silver_customers c ON c.customer_id = k.customer_id;
 
 -- silver_accounts: Accounts with product name, AUD balance and the customer's
 -- region.
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.silver_accounts
+CREATE OR REPLACE TABLE retail_banking.silver_accounts
 COMMENT 'Accounts with product name, AUD balance and the customer\'s region.'
 AS
 SELECT
@@ -3653,19 +3655,19 @@ SELECT
   c.home_branch_id AS branch_id,
   c.country,
   c.region
-FROM harbourstone.retail_banking.bronze_accounts a
-JOIN harbourstone.retail_banking.silver_customers c ON c.customer_id = a.customer_id;
+FROM retail_banking.bronze_accounts a
+JOIN retail_banking.silver_customers c ON c.customer_id = a.customer_id;
 
 -- silver_transactions: Transactions without duplicates, with direction, signed
 -- and AUD amounts, branch and region.
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.silver_transactions
+CREATE OR REPLACE TABLE retail_banking.silver_transactions
 COMMENT 'Transactions without duplicates, with direction, signed and AUD amounts, branch and region.'
 AS
 WITH deduplicated AS (
   -- The extract re-sends some transactions: keep the latest copy of each.
   SELECT t.*, ROW_NUMBER() OVER (PARTITION BY t.txn_id ORDER BY t._batch_id DESC) AS rn
-  FROM harbourstone.retail_banking.bronze_transactions t
+  FROM retail_banking.bronze_transactions t
 )
 SELECT
   t.txn_id,
@@ -3687,12 +3689,12 @@ SELECT
   a.country,
   a.region
 FROM deduplicated t
-JOIN harbourstone.retail_banking.silver_accounts a ON a.account_id = t.account_id
+JOIN retail_banking.silver_accounts a ON a.account_id = t.account_id
 WHERE t.rn = 1;
 
 -- silver_cards: Cards with the customer and region.
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.silver_cards
+CREATE OR REPLACE TABLE retail_banking.silver_cards
 COMMENT 'Cards with the customer and region.'
 AS
 SELECT
@@ -3708,13 +3710,13 @@ SELECT
   k.issued_date,
   a.country,
   a.region
-FROM harbourstone.retail_banking.bronze_cards k
-JOIN harbourstone.retail_banking.silver_accounts a ON a.account_id = k.account_id;
+FROM retail_banking.bronze_cards k
+JOIN retail_banking.silver_accounts a ON a.account_id = k.account_id;
 
 -- silver_home_loans: Home loans with loan-to-value ratio, arrears bucket and
 -- region.
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.silver_home_loans
+CREATE OR REPLACE TABLE retail_banking.silver_home_loans
 COMMENT 'Home loans with loan-to-value ratio, arrears bucket and region.'
 AS
 SELECT
@@ -3735,12 +3737,12 @@ SELECT
        WHEN l.days_in_arrears <= 90 THEN '31-90 DAYS' ELSE '90+ DAYS' END AS arrears_bucket,
   c.country,
   c.region
-FROM harbourstone.retail_banking.bronze_home_loans l
-JOIN harbourstone.retail_banking.silver_customers c ON c.customer_id = l.customer_id;
+FROM retail_banking.bronze_home_loans l
+JOIN retail_banking.silver_customers c ON c.customer_id = l.customer_id;
 
 -- silver_crm_interactions: CRM interactions with the customer's region.
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.silver_crm_interactions
+CREATE OR REPLACE TABLE retail_banking.silver_crm_interactions
 COMMENT 'CRM interactions with the customer\'s region.'
 AS
 SELECT
@@ -3755,12 +3757,12 @@ SELECT
   i.sentiment,
   c.country,
   c.region
-FROM harbourstone.retail_banking.bronze_crm_interactions i
-JOIN harbourstone.retail_banking.silver_customers c ON c.customer_id = i.customer_id;
+FROM retail_banking.bronze_crm_interactions i
+JOIN retail_banking.silver_customers c ON c.customer_id = i.customer_id;
 
 -- silver_complaints: Complaints with days open, month received and region.
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.silver_complaints
+CREATE OR REPLACE TABLE retail_banking.silver_complaints
 COMMENT 'Complaints with days open, month received and region.'
 AS
 SELECT
@@ -3777,13 +3779,13 @@ SELECT
   c.home_branch_id AS branch_id,
   c.country,
   c.region
-FROM harbourstone.retail_banking.bronze_complaints p
-JOIN harbourstone.retail_banking.silver_customers c ON c.customer_id = p.customer_id;
+FROM retail_banking.bronze_complaints p
+JOIN retail_banking.silver_customers c ON c.customer_id = p.customer_id;
 
 -- silver_aml_alerts: AML alerts with risk level, transaction amount and
 -- region.
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.silver_aml_alerts
+CREATE OR REPLACE TABLE retail_banking.silver_aml_alerts
 COMMENT 'AML alerts with risk level, transaction amount and region.'
 AS
 SELECT
@@ -3800,9 +3802,9 @@ SELECT
   t.amount_aud AS txn_amount_aud,
   c.country,
   c.region
-FROM harbourstone.retail_banking.bronze_aml_alerts a
-JOIN harbourstone.retail_banking.silver_customers c ON c.customer_id = a.customer_id
-LEFT JOIN harbourstone.retail_banking.silver_transactions t ON t.txn_id = a.txn_id;
+FROM retail_banking.bronze_aml_alerts a
+JOIN retail_banking.silver_customers c ON c.customer_id = a.customer_id
+LEFT JOIN retail_banking.silver_transactions t ON t.txn_id = a.txn_id;
 
 -- ----------------------------------------------------------------------------
 -- Gold: business-ready data products for reporting and AI. Built from silver.
@@ -3811,7 +3813,7 @@ LEFT JOIN harbourstone.retail_banking.silver_transactions t ON t.txn_id = a.txn_
 -- gold_daily_deposits: Deposits per day and branch in AUD, split into cash and
 -- salary. Answers 'what were total deposits today'.
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.gold_daily_deposits
+CREATE OR REPLACE TABLE retail_banking.gold_daily_deposits
 COMMENT 'Deposits per day and branch in AUD, split into cash and salary. Answers \'what were total deposits today\'.'
 AS
 SELECT
@@ -3824,45 +3826,45 @@ SELECT
   SUM(t.amount_aud) AS total_deposits_aud,
   SUM(CASE WHEN t.channel IN ('BRANCH', 'ATM') THEN t.amount_aud ELSE 0 END) AS cash_deposits_aud,
   SUM(CASE WHEN t.channel = 'DIRECT_CREDIT' THEN t.amount_aud ELSE 0 END) AS salary_deposits_aud
-FROM harbourstone.retail_banking.silver_transactions t
-LEFT JOIN harbourstone.retail_banking.silver_branches b ON b.branch_id = t.branch_id
+FROM retail_banking.silver_transactions t
+LEFT JOIN retail_banking.silver_branches b ON b.branch_id = t.branch_id
 WHERE t.txn_type = 'DEPOSIT'
 GROUP BY 1, 2, 3, 4, 5;
 
 -- gold_customer_360: One row per customer: balances, cards, home loan,
 -- complaints, AML alerts and their last contact with notes.
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.gold_customer_360
+CREATE OR REPLACE TABLE retail_banking.gold_customer_360
 COMMENT 'One row per customer: balances, cards, home loan, complaints, AML alerts and their last contact with notes.'
 AS
 WITH accounts AS (
   SELECT customer_id, COUNT(*) AS accounts, SUM(current_balance_aud) AS total_balance_aud
-  FROM harbourstone.retail_banking.silver_accounts
+  FROM retail_banking.silver_accounts
   WHERE account_status <> 'CLOSED'
   GROUP BY customer_id
 ),
 cards AS (
-  SELECT customer_id, COUNT(*) AS cards FROM harbourstone.retail_banking.silver_cards WHERE card_status = 'ACTIVE' GROUP BY customer_id
+  SELECT customer_id, COUNT(*) AS cards FROM retail_banking.silver_cards WHERE card_status = 'ACTIVE' GROUP BY customer_id
 ),
 loans AS (
   SELECT customer_id, SUM(current_balance) AS home_loan_balance, MAX(days_in_arrears) AS home_loan_days_in_arrears
-  FROM harbourstone.retail_banking.silver_home_loans
+  FROM retail_banking.silver_home_loans
   GROUP BY customer_id
 ),
 complaints AS (
   SELECT customer_id, SUM(CASE WHEN complaint_status <> 'RESOLVED' THEN 1 ELSE 0 END) AS open_complaints
-  FROM harbourstone.retail_banking.silver_complaints
+  FROM retail_banking.silver_complaints
   GROUP BY customer_id
 ),
 alerts AS (
   SELECT customer_id, SUM(CASE WHEN alert_status IN ('OPEN', 'UNDER_REVIEW') THEN 1 ELSE 0 END) AS open_aml_alerts
-  FROM harbourstone.retail_banking.silver_aml_alerts
+  FROM retail_banking.silver_aml_alerts
   GROUP BY customer_id
 ),
 last_contact AS (
   SELECT customer_id, interaction_date, topic, notes,
          ROW_NUMBER() OVER (PARTITION BY customer_id ORDER BY interaction_ts DESC) AS rn
-  FROM harbourstone.retail_banking.silver_crm_interactions
+  FROM retail_banking.silver_crm_interactions
 )
 SELECT
   c.customer_id,
@@ -3886,7 +3888,7 @@ SELECT
   lc.interaction_date AS last_contact_date,
   lc.topic AS last_contact_topic,
   lc.notes AS last_contact_notes
-FROM harbourstone.retail_banking.silver_customers c
+FROM retail_banking.silver_customers c
 LEFT JOIN accounts a ON a.customer_id = c.customer_id
 LEFT JOIN cards k ON k.customer_id = c.customer_id
 LEFT JOIN loans l ON l.customer_id = c.customer_id
@@ -3897,13 +3899,13 @@ LEFT JOIN last_contact lc ON lc.customer_id = c.customer_id AND lc.rn = 1;
 -- gold_complaint_themes: Complaints per month, category and region, with
 -- resolution times, compensation and the latest example.
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.gold_complaint_themes
+CREATE OR REPLACE TABLE retail_banking.gold_complaint_themes
 COMMENT 'Complaints per month, category and region, with resolution times, compensation and the latest example.'
 AS
 WITH latest AS (
   SELECT received_month, category, region, description,
          ROW_NUMBER() OVER (PARTITION BY received_month, category, region ORDER BY received_date DESC, complaint_id) AS rn
-  FROM harbourstone.retail_banking.silver_complaints
+  FROM retail_banking.silver_complaints
 ),
 summary AS (
   SELECT
@@ -3915,7 +3917,7 @@ summary AS (
     SUM(CASE WHEN complaint_status = 'ESCALATED' THEN 1 ELSE 0 END) AS escalated,
     ROUND(AVG(CASE WHEN complaint_status = 'RESOLVED' THEN days_open END), 1) AS avg_days_to_resolve,
     SUM(compensation_amount) AS total_compensation
-  FROM harbourstone.retail_banking.silver_complaints
+  FROM retail_banking.silver_complaints
   GROUP BY 1, 2, 3
 )
 SELECT s.*, l.description AS latest_example
@@ -3925,7 +3927,7 @@ LEFT JOIN latest l ON l.received_month = s.received_month AND l.category = s.cat
 -- gold_aml_overview: AML alerts per day, rule, risk level, status and region,
 -- with customers and amounts.
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.gold_aml_overview
+CREATE OR REPLACE TABLE retail_banking.gold_aml_overview
 COMMENT 'AML alerts per day, rule, risk level, status and region, with customers and amounts.'
 AS
 SELECT
@@ -3938,13 +3940,13 @@ SELECT
   COUNT(DISTINCT customer_id) AS customers,
   ROUND(AVG(CAST(risk_score AS DECIMAL(6,2))), 1) AS avg_risk_score,
   SUM(txn_amount_aud) AS total_txn_amount_aud
-FROM harbourstone.retail_banking.silver_aml_alerts
+FROM retail_banking.silver_aml_alerts
 GROUP BY 1, 2, 3, 4, 5;
 
 -- gold_home_loan_portfolio: Home loan book by region, state, rate type and
 -- arrears bucket, with LVR.
 
-CREATE OR REPLACE TABLE harbourstone.retail_banking.gold_home_loan_portfolio
+CREATE OR REPLACE TABLE retail_banking.gold_home_loan_portfolio
 COMMENT 'Home loan book by region, state, rate type and arrears bucket, with LVR.'
 AS
 SELECT
@@ -3958,11 +3960,11 @@ SELECT
   ROUND(AVG(loan_to_value_pct), 1) AS avg_loan_to_value_pct,
   SUM(CASE WHEN loan_to_value_pct > 80 THEN 1 ELSE 0 END) AS loans_over_80_pct_lvr,
   ROUND(AVG(interest_rate), 2) AS avg_interest_rate
-FROM harbourstone.retail_banking.silver_home_loans
+FROM retail_banking.silver_home_loans
 GROUP BY 1, 2, 3, 4, 5;
 
 -- ============================================================================
--- Harbourstone Commercial Banking (harbourstone.commercial_banking)
+-- Harbourstone Commercial Banking (commercial_banking)
 -- Business lending: business customers, directors and beneficial owners,
 -- facilities, collateral, covenants, repayments and credit reviews. Source:
 -- the commercial lending system (LoanIQ).
@@ -3979,7 +3981,7 @@ GROUP BY 1, 2, 3, 4, 5;
 --     rm_name: Person name
 --   Rows: 23
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_relationship_managers (
+CREATE OR REPLACE TABLE commercial_banking.bronze_relationship_managers (
   rm_employee_id STRING COMMENT 'Matches employee_id in the HR data',
   rm_name STRING COMMENT 'Person name',
   rm_email STRING,
@@ -3990,7 +3992,7 @@ CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_relationship_mana
 )
 COMMENT 'Relationship managers, from the commercial lending system (LoanIQ).';
 
-INSERT INTO harbourstone.commercial_banking.bronze_relationship_managers (rm_employee_id, rm_name, rm_email, position_title, team, _source_system, _batch_id) VALUES
+INSERT INTO commercial_banking.bronze_relationship_managers (rm_employee_id, rm_name, rm_email, position_title, team, _source_system, _batch_id) VALUES
   ('HFG00005', 'Hannah Anderson', 'hannah.anderson@harbourstone.example.com', 'Head of Business Banking', 'Business Banking AU', 'LOANIQ', 'loaniq-0412'),
   ('HFG00006', 'Liam Mitchell', 'liam.mitchell@harbourstone.example.com', 'Chief Credit Officer', 'Business Banking AU', 'LOANIQ', 'loaniq-0412'),
   ('HFG00014', 'Fatima Hassan', 'fatima.hassan@harbourstone.example.com', 'Associate Relationship Manager', 'Business Banking AU', 'LOANIQ', 'loaniq-0412'),
@@ -4023,7 +4025,7 @@ INSERT INTO harbourstone.commercial_banking.bronze_relationship_managers (rm_emp
 --     annual_revenue: Commercially sensitive
 --   Rows: 100
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_business_customers (
+CREATE OR REPLACE TABLE commercial_banking.bronze_business_customers (
   business_id STRING,
   legal_name STRING,
   trading_name STRING,
@@ -4043,7 +4045,7 @@ CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_business_customer
 )
 COMMENT 'Business customers from the commercial lending system.';
 
-INSERT INTO harbourstone.commercial_banking.bronze_business_customers (business_id, legal_name, trading_name, registration_number, registration_type, industry, annual_revenue, employee_count, address_line, suburb, state, country, rm_employee_id, customer_since, _source_system, _batch_id) VALUES
+INSERT INTO commercial_banking.bronze_business_customers (business_id, legal_name, trading_name, registration_number, registration_type, industry, annual_revenue, employee_count, address_line, suburb, state, country, rm_employee_id, customer_since, _source_system, _batch_id) VALUES
   ('B30001', 'Tasman Outfitters Limited', 'Tasman Outfitters', '9429088665433', 'NZBN', 'Retail Trade', 168300000, 267, '228 Macquarie Terrace', 'Ponsonby', 'AUK', 'NZ', 'HFG00023', date_sub(current_date(), 2394), 'LOANIQ', 'loaniq-0412'),
   ('B30002', 'Brolga Resources Limited', 'Brolga Resources', '9429063351657', 'NZBN', 'Mining Services', 7100000, 234, '66 Station Lane', 'Te Aro', 'WGN', 'NZ', 'HFG00089', date_sub(current_date(), 2471), 'LOANIQ', 'loaniq-0412'),
   ('B30003', 'Summit Haulage Pty Ltd', 'Summit Haulage', '37 023 755 444', 'ABN', 'Transport and Logistics', 125400000, 288, '175 Banksia Terrace', 'Adelaide', 'SA', 'AU', 'HFG00104', date_sub(current_date(), 3038), 'LOANIQ', 'loaniq-0412'),
@@ -4155,7 +4157,7 @@ INSERT INTO harbourstone.commercial_banking.bronze_business_customers (business_
 --     is_politically_exposed: Sensitive: politically exposed person (PEP)
 --   Rows: 200
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_business_contacts (
+CREATE OR REPLACE TABLE commercial_banking.bronze_business_contacts (
   contact_id STRING,
   business_id STRING,
   full_name STRING COMMENT 'Person name',
@@ -4171,7 +4173,7 @@ CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_business_contacts
 )
 COMMENT 'Directors, beneficial owners and finance contacts of business customers (KYC).';
 
-INSERT INTO harbourstone.commercial_banking.bronze_business_contacts (contact_id, business_id, full_name, contact_role, ownership_pct, date_of_birth, email, phone, residential_country, is_politically_exposed, _source_system, _batch_id) VALUES
+INSERT INTO commercial_banking.bronze_business_contacts (contact_id, business_id, full_name, contact_role, ownership_pct, date_of_birth, email, phone, residential_country, is_politically_exposed, _source_system, _batch_id) VALUES
   ('BC000001', 'B30001', 'Noah Walsh', 'DIRECTOR', 12, DATE '1997-01-25', 'noah.walsh71@example.org', '+64 21 555 7947', 'NZ', FALSE, 'LOANIQ', 'loaniq-0412'),
   ('BC000002', 'B30001', 'Zoe Zhang', 'BENEFICIAL_OWNER', NULL, DATE '1994-02-22', 'zoe.zhang81@example.net', '+64 21 555 5532', 'NZ', FALSE, 'LOANIQ', 'loaniq-0412'),
   ('BC000003', 'B30002', 'Leo King', 'DIRECTOR', 97, DATE '1994-05-01', 'leo.king58@example.org', '0491 570 665', 'AU', FALSE, 'LOANIQ', 'loaniq-0412'),
@@ -4377,7 +4379,7 @@ INSERT INTO harbourstone.commercial_banking.bronze_business_contacts (contact_id
 -- property and trade finance.
 --   Rows: 174
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_facilities (
+CREATE OR REPLACE TABLE commercial_banking.bronze_facilities (
   facility_id STRING,
   business_id STRING,
   facility_type STRING,
@@ -4393,7 +4395,7 @@ CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_facilities (
 )
 COMMENT 'Lending facilities: term loans, overdrafts, equipment, property and trade finance.';
 
-INSERT INTO harbourstone.commercial_banking.bronze_facilities (facility_id, business_id, facility_type, currency, limit_amount, drawn_amount, interest_rate, start_date, maturity_date, facility_status, _source_system, _batch_id) VALUES
+INSERT INTO commercial_banking.bronze_facilities (facility_id, business_id, facility_type, currency, limit_amount, drawn_amount, interest_rate, start_date, maturity_date, facility_status, _source_system, _batch_id) VALUES
   ('F50001', 'B30001', 'TERM_LOAN', 'NZD', 20196000, 10905840.00, 6.56, date_sub(current_date(), 1077), date_sub(current_date(), 712), 'ACTIVE', 'LOANIQ', 'loaniq-0412'),
   ('F50002', 'B30001', 'EQUIPMENT_FINANCE', 'NZD', 30294000, 15752880.00, 6.83, date_sub(current_date(), 504), date_add(current_date(), 3146), 'ACTIVE', 'LOANIQ', 'loaniq-0412'),
   ('F50003', 'B30001', 'TRADE_FINANCE', 'NZD', 15147000, 10451430.00, 7.42, date_sub(current_date(), 1146), date_sub(current_date(), 781), 'ACTIVE', 'LOANIQ', 'loaniq-0412'),
@@ -4575,7 +4577,7 @@ INSERT INTO harbourstone.commercial_banking.bronze_facilities (facility_id, busi
 --     description: Free text: may include addresses and guarantor names
 --   Rows: 135
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_collateral (
+CREATE OR REPLACE TABLE commercial_banking.bronze_collateral (
   collateral_id STRING,
   facility_id STRING,
   collateral_type STRING,
@@ -4587,7 +4589,7 @@ CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_collateral (
 )
 COMMENT 'Security held against facilities, with the latest valuation.';
 
-INSERT INTO harbourstone.commercial_banking.bronze_collateral (collateral_id, facility_id, collateral_type, description, valuation_amount, valuation_date, _source_system, _batch_id) VALUES
+INSERT INTO commercial_banking.bronze_collateral (collateral_id, facility_id, collateral_type, description, valuation_amount, valuation_date, _source_system, _batch_id) VALUES
   ('COL00001', 'F50001', 'GUARANTEE', 'Personal guarantee from director Noah Walsh', 30899880, date_sub(current_date(), 824), 'LOANIQ', 'loaniq-0412'),
   ('COL00002', 'F50002', 'EQUIPMENT', 'Delivery trucks, serials on file', 45138060, date_sub(current_date(), 96), 'LOANIQ', 'loaniq-0412'),
   ('COL00003', 'F50003', 'CASH', 'Cash cover held in term deposit', 17419050, date_sub(current_date(), 436), 'LOANIQ', 'loaniq-0412'),
@@ -4728,7 +4730,7 @@ INSERT INTO harbourstone.commercial_banking.bronze_collateral (collateral_id, fa
 -- covenants breach below the threshold, MAX above.
 --   Rows: 244
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_covenants (
+CREATE OR REPLACE TABLE commercial_banking.bronze_covenants (
   covenant_id STRING,
   facility_id STRING,
   covenant_type STRING,
@@ -4741,7 +4743,7 @@ CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_covenants (
 )
 COMMENT 'Financial covenant tests for the last two quarters. MIN covenants breach below the threshold, MAX above.';
 
-INSERT INTO harbourstone.commercial_banking.bronze_covenants (covenant_id, facility_id, covenant_type, direction, threshold, actual_value, test_date, _source_system, _batch_id) VALUES
+INSERT INTO commercial_banking.bronze_covenants (covenant_id, facility_id, covenant_type, direction, threshold, actual_value, test_date, _source_system, _batch_id) VALUES
   ('COV00001', 'F50001', 'INTEREST_COVER', 'MIN', 2.00, 2.46, date_sub(current_date(), 30), 'LOANIQ', 'loaniq-0412'),
   ('COV00002', 'F50001', 'INTEREST_COVER', 'MIN', 2.00, 2.60, date_sub(current_date(), 120), 'LOANIQ', 'loaniq-0412'),
   ('COV00003', 'F50001', 'DSCR', 'MIN', 1.25, 2.19, date_sub(current_date(), 30), 'LOANIQ', 'loaniq-0412'),
@@ -4991,7 +4993,7 @@ INSERT INTO harbourstone.commercial_banking.bronze_covenants (covenant_id, facil
 -- is empty when missed.
 --   Rows: 627
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_repayments (
+CREATE OR REPLACE TABLE commercial_banking.bronze_repayments (
   repayment_id STRING,
   facility_id STRING,
   due_date DATE,
@@ -5003,7 +5005,7 @@ CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_repayments (
 )
 COMMENT 'Scheduled repayments for the last six months; paid_date is empty when missed.';
 
-INSERT INTO harbourstone.commercial_banking.bronze_repayments (repayment_id, facility_id, due_date, amount_due, paid_date, amount_paid, _source_system, _batch_id) VALUES
+INSERT INTO commercial_banking.bronze_repayments (repayment_id, facility_id, due_date, amount_due, paid_date, amount_paid, _source_system, _batch_id) VALUES
   ('RP000001', 'F50001', date_sub(current_date(), 5), 336600.00, date_sub(current_date(), 7), 336600.00, 'LOANIQ', 'loaniq-0412'),
   ('RP000002', 'F50001', date_sub(current_date(), 35), 336600.00, date_sub(current_date(), 37), 336600.00, 'LOANIQ', 'loaniq-0412'),
   ('RP000003', 'F50001', date_sub(current_date(), 65), 336600.00, date_sub(current_date(), 66), 336600.00, 'LOANIQ', 'loaniq-0412'),
@@ -5639,7 +5641,7 @@ INSERT INTO harbourstone.commercial_banking.bronze_repayments (repayment_id, fac
 --     commentary: Free text: credit assessment, names directors
 --   Rows: 200
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_credit_reviews (
+CREATE OR REPLACE TABLE commercial_banking.bronze_credit_reviews (
   review_id STRING,
   business_id STRING,
   review_date DATE,
@@ -5652,7 +5654,7 @@ CREATE OR REPLACE TABLE harbourstone.commercial_banking.bronze_credit_reviews (
 )
 COMMENT 'Annual credit reviews: risk grade, probability of default and the analyst\'s commentary.';
 
-INSERT INTO harbourstone.commercial_banking.bronze_credit_reviews (review_id, business_id, review_date, risk_grade, probability_of_default_pct, analyst_employee_id, commentary, _source_system, _batch_id) VALUES
+INSERT INTO commercial_banking.bronze_credit_reviews (review_id, business_id, review_date, risk_grade, probability_of_default_pct, analyst_employee_id, commentary, _source_system, _batch_id) VALUES
   ('CR00001', 'B30001', date_sub(current_date(), 264), 2, 0.10, 'HFG00177', 'Tasman Outfitters continues to trade strongly in retail trade. Revenue of about 168 million is up on last year and debt service cover is comfortable at 2.78x. No concerns; grade maintained.', 'LOANIQ', 'loaniq-0412'),
   ('CR00002', 'B30001', date_sub(current_date(), 112), 3, 0.25, 'HFG00083', 'Tasman Outfitters continues to trade strongly in retail trade. Revenue of about 168 million is up on last year and debt service cover is comfortable at 2.71x. No concerns; grade maintained.', 'LOANIQ', 'loaniq-0412'),
   ('CR00003', 'B30002', date_sub(current_date(), 291), 3, 0.25, 'HFG00177', 'Brolga Resources continues to trade strongly in mining services. Revenue of about 7 million is up on last year and debt service cover is comfortable at 2.65x. No concerns; grade maintained.', 'LOANIQ', 'loaniq-0412'),
@@ -5861,7 +5863,7 @@ INSERT INTO harbourstone.commercial_banking.bronze_credit_reviews (review_id, bu
 -- silver_business_customers: Business customers with cleaned registration
 -- numbers, relationship manager and region.
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.silver_business_customers
+CREATE OR REPLACE TABLE commercial_banking.silver_business_customers
 COMMENT 'Business customers with cleaned registration numbers, relationship manager and region.'
 AS
 SELECT
@@ -5880,13 +5882,13 @@ SELECT
   b.rm_employee_id,
   rm.rm_name,
   b.customer_since
-FROM harbourstone.commercial_banking.bronze_business_customers b
-LEFT JOIN harbourstone.commercial_banking.bronze_relationship_managers rm ON rm.rm_employee_id = b.rm_employee_id;
+FROM commercial_banking.bronze_business_customers b
+LEFT JOIN commercial_banking.bronze_relationship_managers rm ON rm.rm_employee_id = b.rm_employee_id;
 
 -- silver_business_contacts: Directors and owners with age and the business's
 -- region.
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.silver_business_contacts
+CREATE OR REPLACE TABLE commercial_banking.silver_business_contacts
 COMMENT 'Directors and owners with age and the business\'s region.'
 AS
 SELECT
@@ -5902,13 +5904,13 @@ SELECT
   c.residential_country,
   c.is_politically_exposed,
   b.region
-FROM harbourstone.commercial_banking.bronze_business_contacts c
-JOIN harbourstone.commercial_banking.silver_business_customers b ON b.business_id = c.business_id;
+FROM commercial_banking.bronze_business_contacts c
+JOIN commercial_banking.silver_business_customers b ON b.business_id = c.business_id;
 
 -- silver_facilities: Facilities with AUD amounts, utilisation, days to
 -- maturity, industry and region.
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.silver_facilities
+CREATE OR REPLACE TABLE commercial_banking.silver_facilities
 COMMENT 'Facilities with AUD amounts, utilisation, days to maturity, industry and region.'
 AS
 SELECT
@@ -5929,12 +5931,12 @@ SELECT
   b.industry,
   b.country,
   b.region
-FROM harbourstone.commercial_banking.bronze_facilities f
-JOIN harbourstone.commercial_banking.silver_business_customers b ON b.business_id = f.business_id;
+FROM commercial_banking.bronze_facilities f
+JOIN commercial_banking.silver_business_customers b ON b.business_id = f.business_id;
 
 -- silver_collateral: Collateral with AUD valuation and region.
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.silver_collateral
+CREATE OR REPLACE TABLE commercial_banking.silver_collateral
 COMMENT 'Collateral with AUD valuation and region.'
 AS
 SELECT
@@ -5947,12 +5949,12 @@ SELECT
   CAST(c.valuation_amount * CASE f.currency WHEN 'AUD' THEN 1.00 WHEN 'NZD' THEN 0.92 WHEN 'SGD' THEN 1.13 WHEN 'GBP' THEN 1.95 WHEN 'USD' THEN 1.52 WHEN 'EUR' THEN 1.66 END AS DECIMAL(18,2)) AS valuation_aud,
   c.valuation_date,
   f.region
-FROM harbourstone.commercial_banking.bronze_collateral c
-JOIN harbourstone.commercial_banking.silver_facilities f ON f.facility_id = c.facility_id;
+FROM commercial_banking.bronze_collateral c
+JOIN commercial_banking.silver_facilities f ON f.facility_id = c.facility_id;
 
 -- silver_covenants: Covenant tests with a breach flag.
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.silver_covenants
+CREATE OR REPLACE TABLE commercial_banking.silver_covenants
 COMMENT 'Covenant tests with a breach flag.'
 AS
 SELECT
@@ -5968,12 +5970,12 @@ SELECT
        WHEN c.direction = 'MAX' AND c.actual_value > c.threshold THEN TRUE
        ELSE FALSE END AS is_breached,
   f.region
-FROM harbourstone.commercial_banking.bronze_covenants c
-JOIN harbourstone.commercial_banking.silver_facilities f ON f.facility_id = c.facility_id;
+FROM commercial_banking.bronze_covenants c
+JOIN commercial_banking.silver_facilities f ON f.facility_id = c.facility_id;
 
 -- silver_repayments: Repayments with missed flag, days late and AUD shortfall.
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.silver_repayments
+CREATE OR REPLACE TABLE commercial_banking.silver_repayments
 COMMENT 'Repayments with missed flag, days late and AUD shortfall.'
 AS
 SELECT
@@ -5992,18 +5994,18 @@ SELECT
        ELSE 0 END AS days_late,
   CAST(p.amount_due - p.amount_paid * CASE f.currency WHEN 'AUD' THEN 1.00 WHEN 'NZD' THEN 0.92 WHEN 'SGD' THEN 1.13 WHEN 'GBP' THEN 1.95 WHEN 'USD' THEN 1.52 WHEN 'EUR' THEN 1.66 END AS DECIMAL(18,2)) AS shortfall_aud,
   f.region
-FROM harbourstone.commercial_banking.bronze_repayments p
-JOIN harbourstone.commercial_banking.silver_facilities f ON f.facility_id = p.facility_id;
+FROM commercial_banking.bronze_repayments p
+JOIN commercial_banking.silver_facilities f ON f.facility_id = p.facility_id;
 
 -- silver_credit_reviews: Credit reviews with risk band; is_latest marks each
 -- business's current review.
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.silver_credit_reviews
+CREATE OR REPLACE TABLE commercial_banking.silver_credit_reviews
 COMMENT 'Credit reviews with risk band; is_latest marks each business\'s current review.'
 AS
 WITH ranked AS (
   SELECT r.*, ROW_NUMBER() OVER (PARTITION BY r.business_id ORDER BY r.review_date DESC) AS rn
-  FROM harbourstone.commercial_banking.bronze_credit_reviews r
+  FROM commercial_banking.bronze_credit_reviews r
 )
 SELECT
   r.review_id,
@@ -6017,7 +6019,7 @@ SELECT
   CASE WHEN r.rn = 1 THEN TRUE ELSE FALSE END AS is_latest,
   b.region
 FROM ranked r
-JOIN harbourstone.commercial_banking.silver_business_customers b ON b.business_id = r.business_id;
+JOIN commercial_banking.silver_business_customers b ON b.business_id = r.business_id;
 
 -- ----------------------------------------------------------------------------
 -- Gold: business-ready data products for reporting and AI. Built from silver.
@@ -6027,26 +6029,26 @@ JOIN harbourstone.commercial_banking.silver_business_customers b ON b.business_i
 -- collateral cover, risk grade, covenant breaches, arrears and the latest
 -- analyst commentary.
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.gold_risk_profile
+CREATE OR REPLACE TABLE commercial_banking.gold_risk_profile
 COMMENT 'One row per business borrower: exposure, utilisation, collateral cover, risk grade, covenant breaches, arrears and the latest analyst commentary.'
 AS
 WITH exposure AS (
   SELECT business_id, COUNT(*) AS facilities, SUM(limit_aud) AS total_limit_aud, SUM(drawn_aud) AS total_drawn_aud
-  FROM harbourstone.commercial_banking.silver_facilities
+  FROM commercial_banking.silver_facilities
   GROUP BY business_id
 ),
 security AS (
-  SELECT business_id, SUM(valuation_aud) AS collateral_aud FROM harbourstone.commercial_banking.silver_collateral GROUP BY business_id
+  SELECT business_id, SUM(valuation_aud) AS collateral_aud FROM commercial_banking.silver_collateral GROUP BY business_id
 ),
 breaches AS (
   SELECT business_id, SUM(CASE WHEN is_breached THEN 1 ELSE 0 END) AS covenant_breaches
-  FROM harbourstone.commercial_banking.silver_covenants
+  FROM commercial_banking.silver_covenants
   GROUP BY business_id
 ),
 arrears AS (
   SELECT business_id, SUM(CASE WHEN is_missed THEN 1 ELSE 0 END) AS missed_repayments, MAX(days_late) AS max_days_late,
          SUM(shortfall_aud) AS arrears_aud
-  FROM harbourstone.commercial_banking.silver_repayments
+  FROM commercial_banking.silver_repayments
   GROUP BY business_id
 )
 SELECT
@@ -6071,17 +6073,17 @@ SELECT
   COALESCE(a.arrears_aud, 0) AS arrears_aud,
   r.review_date AS latest_review_date,
   r.commentary AS latest_analyst_commentary
-FROM harbourstone.commercial_banking.silver_business_customers b
+FROM commercial_banking.silver_business_customers b
 JOIN exposure e ON e.business_id = b.business_id
 LEFT JOIN security sc ON sc.business_id = b.business_id
 LEFT JOIN breaches br ON br.business_id = b.business_id
 LEFT JOIN arrears a ON a.business_id = b.business_id
-LEFT JOIN harbourstone.commercial_banking.silver_credit_reviews r ON r.business_id = b.business_id AND r.is_latest;
+LEFT JOIN commercial_banking.silver_credit_reviews r ON r.business_id = b.business_id AND r.is_latest;
 
 -- gold_portfolio_by_industry: Commercial lending book by industry and region:
 -- exposure, average risk grade, high-risk borrowers, breaches and arrears.
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.gold_portfolio_by_industry
+CREATE OR REPLACE TABLE commercial_banking.gold_portfolio_by_industry
 COMMENT 'Commercial lending book by industry and region: exposure, average risk grade, high-risk borrowers, breaches and arrears.'
 AS
 SELECT
@@ -6096,13 +6098,13 @@ SELECT
   SUM(CASE WHEN risk_band IN ('HIGH', 'WATCHLIST') THEN total_drawn_aud ELSE 0 END) AS high_risk_drawn_aud,
   SUM(covenant_breaches_6_months) AS covenant_breaches_6_months,
   SUM(arrears_aud) AS arrears_aud
-FROM harbourstone.commercial_banking.gold_risk_profile
+FROM commercial_banking.gold_risk_profile
 GROUP BY 1, 2;
 
 -- gold_arrears_monthly: Repayments due, paid, late and missed per month,
 -- facility type and region.
 
-CREATE OR REPLACE TABLE harbourstone.commercial_banking.gold_arrears_monthly
+CREATE OR REPLACE TABLE commercial_banking.gold_arrears_monthly
 COMMENT 'Repayments due, paid, late and missed per month, facility type and region.'
 AS
 SELECT
@@ -6115,11 +6117,11 @@ SELECT
   SUM(CASE WHEN is_missed THEN 1 ELSE 0 END) AS missed_repayments,
   SUM(CASE WHEN days_late > 0 THEN 1 ELSE 0 END) AS late_repayments,
   SUM(shortfall_aud) AS shortfall_aud
-FROM harbourstone.commercial_banking.silver_repayments
+FROM commercial_banking.silver_repayments
 GROUP BY 1, 2, 3;
 
 -- ============================================================================
--- Harbourstone Insurance (harbourstone.insurance)
+-- Harbourstone Insurance (insurance)
 -- General insurance: policyholders, motor and home policies, insured vehicles
 -- and properties, claims, claim notes, payments and fraud flags. Source: the
 -- policy and claims system (Guidewire).
@@ -6142,7 +6144,7 @@ GROUP BY 1, 2, 3;
 --     bank_customer_id: Matches customer_id in retail banking
 --   Rows: 400
 
-CREATE OR REPLACE TABLE harbourstone.insurance.bronze_policyholders (
+CREATE OR REPLACE TABLE insurance.bronze_policyholders (
   policyholder_id STRING,
   first_name STRING COMMENT 'Person name',
   last_name STRING COMMENT 'Person name',
@@ -6161,7 +6163,7 @@ CREATE OR REPLACE TABLE harbourstone.insurance.bronze_policyholders (
 )
 COMMENT 'Policyholders from the policy administration system. bank_customer_id links cross-sold customers to retail banking.';
 
-INSERT INTO harbourstone.insurance.bronze_policyholders (policyholder_id, first_name, last_name, date_of_birth, email, phone, address_line, suburb, state, postcode, country, drivers_licence_number, bank_customer_id, _source_system, _batch_id) VALUES
+INSERT INTO insurance.bronze_policyholders (policyholder_id, first_name, last_name, date_of_birth, email, phone, address_line, suburb, state, postcode, country, drivers_licence_number, bank_customer_id, _source_system, _batch_id) VALUES
   ('PH400001', 'Aroha', 'Doyle', DATE '1968-10-28', 'aroha.doyle71@example.net', '+64 21 555 0542', '192 Flinders Road', 'Takapuna', 'AUK', '0622', 'NZ', '75319643', 'C100164', 'GUIDEWIRE', 'gw-0412'),
   ('PH400002', 'Amelia', 'Mitchell', DATE '1954-04-27', 'amelia.mitchell91@example.org', '0491 570 960', 'Unit 27/158 Park Avenue', 'Cairns', 'QLD', '4870', 'AU', '95928184', 'C100066', 'GUIDEWIRE', 'gw-0412'),
   ('PH400003', 'Jack', 'White', DATE '1950-08-25', 'jack.white94@example.org', '0491 570 957', 'Unit 17/162 Bridge Crescent', 'Cairns', 'QLD', '4870', 'AU', '894207960', 'C100118', 'GUIDEWIRE', 'gw-0412'),
@@ -6567,7 +6569,7 @@ INSERT INTO harbourstone.insurance.bronze_policyholders (policyholder_id, first_
 -- the start date.
 --   Rows: 650
 
-CREATE OR REPLACE TABLE harbourstone.insurance.bronze_policies (
+CREATE OR REPLACE TABLE insurance.bronze_policies (
   policy_id STRING,
   policyholder_id STRING,
   product_code STRING,
@@ -6583,7 +6585,7 @@ CREATE OR REPLACE TABLE harbourstone.insurance.bronze_policies (
 )
 COMMENT 'Motor and home policies. Policies run for 12 months from the start date.';
 
-INSERT INTO harbourstone.insurance.bronze_policies (policy_id, policyholder_id, product_code, start_date, end_date, sum_insured, annual_premium, excess, policy_status, sales_channel, _source_system, _batch_id) VALUES
+INSERT INTO insurance.bronze_policies (policy_id, policyholder_id, product_code, start_date, end_date, sum_insured, annual_premium, excess, policy_status, sales_channel, _source_system, _batch_id) VALUES
   ('POL700001', 'PH400001', 'HOME_CONTENTS', date_sub(current_date(), 686), date_sub(current_date(), 321), 99000, 1079.10, 500, 'RENEWED', 'BANK_CROSS_SELL', 'GUIDEWIRE', 'gw-0412'),
   ('POL700002', 'PH400002', 'HOME_CONTENTS', date_sub(current_date(), 24), date_add(current_date(), 341), 205000, 2665.00, 2000, 'ACTIVE', 'BANK_CROSS_SELL', 'GUIDEWIRE', 'gw-0412'),
   ('POL700003', 'PH400003', 'MOTOR_THIRD_PARTY', date_sub(current_date(), 617), date_sub(current_date(), 252), 20000000, 582.32, 750, 'RENEWED', 'BANK_CROSS_SELL', 'GUIDEWIRE', 'gw-0412'),
@@ -7241,7 +7243,7 @@ INSERT INTO harbourstone.insurance.bronze_policies (policy_id, policyholder_id, 
 --     registration: Number plate
 --   Rows: 341
 
-CREATE OR REPLACE TABLE harbourstone.insurance.bronze_vehicles (
+CREATE OR REPLACE TABLE insurance.bronze_vehicles (
   vehicle_id STRING,
   policy_id STRING,
   vin STRING COMMENT 'Vehicle identification number',
@@ -7255,7 +7257,7 @@ CREATE OR REPLACE TABLE harbourstone.insurance.bronze_vehicles (
 )
 COMMENT 'Vehicles insured by motor policies.';
 
-INSERT INTO harbourstone.insurance.bronze_vehicles (vehicle_id, policy_id, vin, registration, make, model, build_year, garaged_postcode, _source_system, _batch_id) VALUES
+INSERT INTO insurance.bronze_vehicles (vehicle_id, policy_id, vin, registration, make, model, build_year, garaged_postcode, _source_system, _batch_id) VALUES
   ('VEH00001', 'POL700003', 'UK35GTTWVEEZ0M28H', 'VZL73F', 'Mitsubishi', 'Triton', 2019, '4870', 'GUIDEWIRE', 'gw-0412'),
   ('VEH00002', 'POL700005', 'HA7BUA0S6JT0ALYR6', 'XYE42D', 'Toyota', 'RAV4', 2023, '6011', 'GUIDEWIRE', 'gw-0412'),
   ('VEH00003', 'POL700007', 'EY9H8T4HZ643THT7M', 'KRM00L', 'Hyundai', 'i30', 2008, '3121', 'GUIDEWIRE', 'gw-0412'),
@@ -7604,7 +7606,7 @@ INSERT INTO harbourstone.insurance.bronze_vehicles (vehicle_id, policy_id, vin, 
 --     address_line: PII: street address
 --   Rows: 309
 
-CREATE OR REPLACE TABLE harbourstone.insurance.bronze_properties (
+CREATE OR REPLACE TABLE insurance.bronze_properties (
   property_id STRING,
   policy_id STRING,
   address_line STRING COMMENT 'PII: street address',
@@ -7621,7 +7623,7 @@ CREATE OR REPLACE TABLE harbourstone.insurance.bronze_properties (
 )
 COMMENT 'Properties insured by home and landlord policies, with natural hazard flags.';
 
-INSERT INTO harbourstone.insurance.bronze_properties (property_id, policy_id, address_line, suburb, state, postcode, country, construction_type, year_built, in_flood_zone, in_bushfire_zone, _source_system, _batch_id) VALUES
+INSERT INTO insurance.bronze_properties (property_id, policy_id, address_line, suburb, state, postcode, country, construction_type, year_built, in_flood_zone, in_bushfire_zone, _source_system, _batch_id) VALUES
   ('PRP00001', 'POL700001', '192 Flinders Road', 'Takapuna', 'AUK', '0622', 'NZ', 'BRICK', 2019, FALSE, FALSE, 'GUIDEWIRE', 'gw-0412'),
   ('PRP00002', 'POL700002', 'Unit 27/158 Park Avenue', 'Cairns', 'QLD', '4870', 'AU', 'BRICK', 2016, FALSE, FALSE, 'GUIDEWIRE', 'gw-0412'),
   ('PRP00003', 'POL700004', '209 King Road', 'Te Aro', 'WGN', '6011', 'NZ', 'TIMBER', 1951, FALSE, FALSE, 'GUIDEWIRE', 'gw-0412'),
@@ -7938,7 +7940,7 @@ INSERT INTO harbourstone.insurance.bronze_properties (property_id, policy_id, ad
 --     assessor_employee_id: Matches employee_id in the HR data
 --   Rows: 110
 
-CREATE OR REPLACE TABLE harbourstone.insurance.bronze_claims (
+CREATE OR REPLACE TABLE insurance.bronze_claims (
   claim_id STRING,
   policy_id STRING,
   loss_date DATE,
@@ -7953,7 +7955,7 @@ CREATE OR REPLACE TABLE harbourstone.insurance.bronze_claims (
 )
 COMMENT 'Claims from the claims system. reserve_amount is the expected cost still to pay.';
 
-INSERT INTO harbourstone.insurance.bronze_claims (claim_id, policy_id, loss_date, reported_date, peril, claimed_amount, reserve_amount, claim_status, assessor_employee_id, _source_system, _batch_id) VALUES
+INSERT INTO insurance.bronze_claims (claim_id, policy_id, loss_date, reported_date, peril, claimed_amount, reserve_amount, claim_status, assessor_employee_id, _source_system, _batch_id) VALUES
   ('CLM800001', 'POL700160', date_sub(current_date(), 123), date_sub(current_date(), 118), 'COLLISION', 2941.51, 2941.51, 'APPROVED', 'HFG00162', 'GUIDEWIRE', 'gw-0412'),
   ('CLM800002', 'POL700461', date_sub(current_date(), 246), date_sub(current_date(), 242), 'WATER_DAMAGE', 4643.96, 4643.96, 'APPROVED', 'HFG00015', 'GUIDEWIRE', 'gw-0412'),
   ('CLM800003', 'POL700402', date_sub(current_date(), 206), date_sub(current_date(), 203), 'WATER_DAMAGE', 6880.68, 0.00, 'SETTLED', 'HFG00235', 'GUIDEWIRE', 'gw-0412'),
@@ -8071,7 +8073,7 @@ INSERT INTO harbourstone.insurance.bronze_claims (claim_id, policy_id, loss_date
 --       and sometimes injuries
 --   Rows: 214
 
-CREATE OR REPLACE TABLE harbourstone.insurance.bronze_claim_notes (
+CREATE OR REPLACE TABLE insurance.bronze_claim_notes (
   note_id STRING,
   claim_id STRING,
   note_ts TIMESTAMP,
@@ -8083,7 +8085,7 @@ CREATE OR REPLACE TABLE harbourstone.insurance.bronze_claim_notes (
 )
 COMMENT 'File notes written by claims officers and assessors.';
 
-INSERT INTO harbourstone.insurance.bronze_claim_notes (note_id, claim_id, note_ts, author_role, author_employee_id, note_text, _source_system, _batch_id) VALUES
+INSERT INTO insurance.bronze_claim_notes (note_id, claim_id, note_ts, author_role, author_employee_id, note_text, _source_system, _batch_id) VALUES
   ('NTE000001', 'CLM800001', CAST(date_sub(current_date(), 118) AS TIMESTAMP) + INTERVAL 680 MINUTES, 'CLAIMS_OFFICER', 'HFG00054', 'Insured rear-ended at lights on Elizabeth Road. Third party driver Henry Murphy, licence 72952307, admitted fault. Car towed to Dry Fix Restorations.', 'GUIDEWIRE', 'gw-0412'),
   ('NTE000002', 'CLM800001', CAST(date_sub(current_date(), 108) AS TIMESTAMP) + INTERVAL 1000 MINUTES, 'ASSESSOR', 'HFG00162', 'Assessor inspected vehicle at Dry Fix Restorations. Quote of 1500 dollars approved for panel and bumper repairs.', 'GUIDEWIRE', 'gw-0412'),
   ('NTE000003', 'CLM800002', CAST(date_sub(current_date(), 242) AS TIMESTAMP) + INTERVAL 808 MINUTES, 'CLAIMS_OFFICER', 'HFG00063', 'Burst flexi hose under the bathroom vanity. Water damage to flooring and the hallway.', 'GUIDEWIRE', 'gw-0412'),
@@ -8307,7 +8309,7 @@ INSERT INTO harbourstone.insurance.bronze_claim_notes (note_id, claim_id, note_t
 --     payee_account_number: Financial: account number
 --   Rows: 85
 
-CREATE OR REPLACE TABLE harbourstone.insurance.bronze_claim_payments (
+CREATE OR REPLACE TABLE insurance.bronze_claim_payments (
   payment_id STRING,
   claim_id STRING,
   paid_date DATE,
@@ -8321,7 +8323,7 @@ CREATE OR REPLACE TABLE harbourstone.insurance.bronze_claim_payments (
 )
 COMMENT 'Payments made on claims, to policyholders or repairers.';
 
-INSERT INTO harbourstone.insurance.bronze_claim_payments (payment_id, claim_id, paid_date, amount, payee_name, payee_bsb, payee_account_number, payment_method, _source_system, _batch_id) VALUES
+INSERT INTO insurance.bronze_claim_payments (payment_id, claim_id, paid_date, amount, payee_name, payee_bsb, payee_account_number, payment_method, _source_system, _batch_id) VALUES
   ('PMT000001', 'CLM800001', date_sub(current_date(), 93), 2529.70, 'Wei White', '033-096', '625352616', 'EFT', 'GUIDEWIRE', 'gw-0412'),
   ('PMT000002', 'CLM800002', date_sub(current_date(), 214), 4272.44, 'Smash Repairs Express Pty Ltd', '083-454', '992491170', 'EFT', 'GUIDEWIRE', 'gw-0412'),
   ('PMT000003', 'CLM800003', date_sub(current_date(), 179), 5710.96, 'Precision Panel Works Pty Ltd', '033-103', '461037892', 'EFT', 'GUIDEWIRE', 'gw-0412'),
@@ -8415,7 +8417,7 @@ INSERT INTO harbourstone.insurance.bronze_claim_payments (payment_id, claim_id, 
 --     details: Free text: why the claim was flagged
 --   Rows: 36
 
-CREATE OR REPLACE TABLE harbourstone.insurance.bronze_fraud_flags (
+CREATE OR REPLACE TABLE insurance.bronze_fraud_flags (
   flag_id STRING,
   claim_id STRING,
   flagged_at TIMESTAMP,
@@ -8427,7 +8429,7 @@ CREATE OR REPLACE TABLE harbourstone.insurance.bronze_fraud_flags (
 )
 COMMENT 'Fraud indicators raised on claims by the fraud detection rules.';
 
-INSERT INTO harbourstone.insurance.bronze_fraud_flags (flag_id, claim_id, flagged_at, indicator, fraud_score, details, _source_system, _batch_id) VALUES
+INSERT INTO insurance.bronze_fraud_flags (flag_id, claim_id, flagged_at, indicator, fraud_score, details, _source_system, _batch_id) VALUES
   ('FRD00001', 'CLM800025', CAST(date_sub(current_date(), 331) AS TIMESTAMP) + INTERVAL 225 MINUTES, 'LATE_REPORTING', 59, 'Loss reported 29 days after the event with no explanation for the delay.', 'GUIDEWIRE', 'gw-0412'),
   ('FRD00002', 'CLM800046', CAST(date_sub(current_date(), 547) AS TIMESTAMP) + INTERVAL 109 MINUTES, 'LATE_REPORTING', 67, 'Loss reported 45 days after the event with no explanation for the delay.', 'GUIDEWIRE', 'gw-0412'),
   ('FRD00003', 'CLM800052', CAST(date_sub(current_date(), 87) AS TIMESTAMP) + INTERVAL 224 MINUTES, 'LATE_REPORTING', 86, 'Loss reported 71 days after the event with no explanation for the delay.', 'GUIDEWIRE', 'gw-0412'),
@@ -8472,7 +8474,7 @@ INSERT INTO harbourstone.insurance.bronze_fraud_flags (flag_id, claim_id, flagge
 -- silver_policyholders: Policyholders with tidied names, age, region and
 -- whether they also bank with Harbourstone.
 
-CREATE OR REPLACE TABLE harbourstone.insurance.silver_policyholders
+CREATE OR REPLACE TABLE insurance.silver_policyholders
 COMMENT 'Policyholders with tidied names, age, region and whether they also bank with Harbourstone.'
 AS
 SELECT
@@ -8492,12 +8494,12 @@ SELECT
   h.drivers_licence_number,
   h.bank_customer_id,
   CASE WHEN h.bank_customer_id IS NULL THEN FALSE ELSE TRUE END AS is_bank_customer
-FROM harbourstone.insurance.bronze_policyholders h;
+FROM insurance.bronze_policyholders h;
 
 -- silver_policies: Policies with product line, in-force flag and the
 -- policyholder's region.
 
-CREATE OR REPLACE TABLE harbourstone.insurance.silver_policies
+CREATE OR REPLACE TABLE insurance.silver_policies
 COMMENT 'Policies with product line, in-force flag and the policyholder\'s region.'
 AS
 SELECT
@@ -8516,37 +8518,37 @@ SELECT
   h.state,
   h.country,
   h.region
-FROM harbourstone.insurance.bronze_policies p
-JOIN harbourstone.insurance.silver_policyholders h ON h.policyholder_id = p.policyholder_id;
+FROM insurance.bronze_policies p
+JOIN insurance.silver_policyholders h ON h.policyholder_id = p.policyholder_id;
 
 -- silver_vehicles: Insured vehicles with region.
 
-CREATE OR REPLACE TABLE harbourstone.insurance.silver_vehicles
+CREATE OR REPLACE TABLE insurance.silver_vehicles
 COMMENT 'Insured vehicles with region.'
 AS
 SELECT v.vehicle_id, v.policy_id, v.vin, UPPER(v.registration) AS registration, v.make, v.model, v.build_year,
        v.garaged_postcode, p.region
-FROM harbourstone.insurance.bronze_vehicles v
-JOIN harbourstone.insurance.silver_policies p ON p.policy_id = v.policy_id;
+FROM insurance.bronze_vehicles v
+JOIN insurance.silver_policies p ON p.policy_id = v.policy_id;
 
 -- silver_properties: Insured properties with hazard flags and region.
 
-CREATE OR REPLACE TABLE harbourstone.insurance.silver_properties
+CREATE OR REPLACE TABLE insurance.silver_properties
 COMMENT 'Insured properties with hazard flags and region.'
 AS
 SELECT pr.property_id, pr.policy_id, pr.address_line, pr.suburb, pr.state, pr.postcode, pr.country,
        pr.construction_type, pr.year_built, pr.in_flood_zone, pr.in_bushfire_zone, p.region
-FROM harbourstone.insurance.bronze_properties pr
-JOIN harbourstone.insurance.silver_policies p ON p.policy_id = pr.policy_id;
+FROM insurance.bronze_properties pr
+JOIN insurance.silver_policies p ON p.policy_id = pr.policy_id;
 
 -- silver_claims: Claims with product, days to report, amounts paid and
 -- incurred, open flag and region.
 
-CREATE OR REPLACE TABLE harbourstone.insurance.silver_claims
+CREATE OR REPLACE TABLE insurance.silver_claims
 COMMENT 'Claims with product, days to report, amounts paid and incurred, open flag and region.'
 AS
 WITH paid AS (
-  SELECT claim_id, SUM(amount) AS total_paid FROM harbourstone.insurance.bronze_claim_payments GROUP BY claim_id
+  SELECT claim_id, SUM(amount) AS total_paid FROM insurance.bronze_claim_payments GROUP BY claim_id
 )
 SELECT
   c.claim_id,
@@ -8570,37 +8572,37 @@ SELECT
   p.state,
   p.country,
   p.region
-FROM harbourstone.insurance.bronze_claims c
-JOIN harbourstone.insurance.silver_policies p ON p.policy_id = c.policy_id
+FROM insurance.bronze_claims c
+JOIN insurance.silver_policies p ON p.policy_id = c.policy_id
 LEFT JOIN paid pd ON pd.claim_id = c.claim_id;
 
 -- silver_claim_notes: Claim file notes with peril and region.
 
-CREATE OR REPLACE TABLE harbourstone.insurance.silver_claim_notes
+CREATE OR REPLACE TABLE insurance.silver_claim_notes
 COMMENT 'Claim file notes with peril and region.'
 AS
 SELECT n.note_id, n.claim_id, n.note_ts, n.author_role, n.author_employee_id, n.note_text, c.peril, c.region
-FROM harbourstone.insurance.bronze_claim_notes n
-JOIN harbourstone.insurance.silver_claims c ON c.claim_id = n.claim_id;
+FROM insurance.bronze_claim_notes n
+JOIN insurance.silver_claims c ON c.claim_id = n.claim_id;
 
 -- silver_claim_payments: Claim payments with region.
 
-CREATE OR REPLACE TABLE harbourstone.insurance.silver_claim_payments
+CREATE OR REPLACE TABLE insurance.silver_claim_payments
 COMMENT 'Claim payments with region.'
 AS
 SELECT pm.payment_id, pm.claim_id, pm.paid_date, pm.amount, pm.payee_name, pm.payee_bsb, pm.payee_account_number,
        pm.payment_method, c.region
-FROM harbourstone.insurance.bronze_claim_payments pm
-JOIN harbourstone.insurance.silver_claims c ON c.claim_id = pm.claim_id;
+FROM insurance.bronze_claim_payments pm
+JOIN insurance.silver_claims c ON c.claim_id = pm.claim_id;
 
 -- silver_fraud_flags: Fraud flags with region.
 
-CREATE OR REPLACE TABLE harbourstone.insurance.silver_fraud_flags
+CREATE OR REPLACE TABLE insurance.silver_fraud_flags
 COMMENT 'Fraud flags with region.'
 AS
 SELECT f.flag_id, f.claim_id, f.flagged_at, f.indicator, f.fraud_score, f.details, c.region
-FROM harbourstone.insurance.bronze_fraud_flags f
-JOIN harbourstone.insurance.silver_claims c ON c.claim_id = f.claim_id;
+FROM insurance.bronze_fraud_flags f
+JOIN insurance.silver_claims c ON c.claim_id = f.claim_id;
 
 -- ----------------------------------------------------------------------------
 -- Gold: business-ready data products for reporting and AI. Built from silver.
@@ -8609,20 +8611,20 @@ JOIN harbourstone.insurance.silver_claims c ON c.claim_id = f.claim_id;
 -- gold_loss_ratio: Earned premium and claims incurred in the last 12 months,
 -- and the loss ratio, by product and region.
 
-CREATE OR REPLACE TABLE harbourstone.insurance.gold_loss_ratio
+CREATE OR REPLACE TABLE insurance.gold_loss_ratio
 COMMENT 'Earned premium and claims incurred in the last 12 months, and the loss ratio, by product and region.'
 AS
 WITH premium AS (
   -- Earned premium: each policy's premium for the part of its term in the last 12 months.
   SELECT product_code, region, SUM(CASE WHEN is_in_force THEN 1 ELSE 0 END) AS policies_in_force,
          SUM(annual_premium * datediff(CAST(LEAST(end_date, current_date()) AS DATE), CAST(GREATEST(start_date, date_add(current_date(), -365)) AS DATE)) / 365) AS earned_premium
-  FROM harbourstone.insurance.silver_policies
+  FROM insurance.silver_policies
   WHERE start_date <= current_date() AND end_date >= date_add(current_date(), -365) AND policy_status <> 'CANCELLED'
   GROUP BY product_code, region
 ),
 losses AS (
   SELECT product_code, region, COUNT(*) AS claims, SUM(incurred_amount) AS incurred
-  FROM harbourstone.insurance.silver_claims
+  FROM insurance.silver_claims
   WHERE loss_date >= date_add(current_date(), -365) AND claim_status NOT IN ('DECLINED', 'WITHDRAWN')
   GROUP BY product_code, region
 )
@@ -8640,16 +8642,16 @@ LEFT JOIN losses l ON l.product_code = p.product_code AND l.region = p.region;
 -- gold_claims_overview: One row per claim: product, peril, status, amounts,
 -- fraud flags and the latest file note.
 
-CREATE OR REPLACE TABLE harbourstone.insurance.gold_claims_overview
+CREATE OR REPLACE TABLE insurance.gold_claims_overview
 COMMENT 'One row per claim: product, peril, status, amounts, fraud flags and the latest file note.'
 AS
 WITH latest_note AS (
   SELECT claim_id, note_text, ROW_NUMBER() OVER (PARTITION BY claim_id ORDER BY note_ts DESC) AS rn
-  FROM harbourstone.insurance.silver_claim_notes
+  FROM insurance.silver_claim_notes
 ),
 fraud AS (
   SELECT claim_id, COUNT(*) AS fraud_flags, MAX(fraud_score) AS max_fraud_score
-  FROM harbourstone.insurance.silver_fraud_flags
+  FROM insurance.silver_fraud_flags
   GROUP BY claim_id
 )
 SELECT
@@ -8674,19 +8676,19 @@ SELECT
   c.state,
   c.country,
   c.region
-FROM harbourstone.insurance.silver_claims c
+FROM insurance.silver_claims c
 LEFT JOIN fraud f ON f.claim_id = c.claim_id
 LEFT JOIN latest_note n ON n.claim_id = c.claim_id AND n.rn = 1;
 
 -- gold_catastrophe_exposure: In-force home cover by state and hazard zone,
 -- with weather claims in the last 12 months.
 
-CREATE OR REPLACE TABLE harbourstone.insurance.gold_catastrophe_exposure
+CREATE OR REPLACE TABLE insurance.gold_catastrophe_exposure
 COMMENT 'In-force home cover by state and hazard zone, with weather claims in the last 12 months.'
 AS
 WITH weather_claims AS (
   SELECT policy_id, COUNT(*) AS weather_claims, SUM(incurred_amount) AS weather_incurred
-  FROM harbourstone.insurance.silver_claims
+  FROM insurance.silver_claims
   WHERE peril IN ('STORM', 'FLOOD', 'FIRE', 'HAIL') AND loss_date >= date_add(current_date(), -365)
   GROUP BY policy_id
 )
@@ -8700,8 +8702,8 @@ SELECT
   SUM(p.sum_insured) AS total_sum_insured,
   SUM(COALESCE(w.weather_claims, 0)) AS weather_claims_12_months,
   SUM(COALESCE(w.weather_incurred, 0)) AS weather_incurred_12_months
-FROM harbourstone.insurance.silver_properties pr
-JOIN harbourstone.insurance.silver_policies p ON p.policy_id = pr.policy_id
+FROM insurance.silver_properties pr
+JOIN insurance.silver_policies p ON p.policy_id = pr.policy_id
 LEFT JOIN weather_claims w ON w.policy_id = pr.policy_id
 WHERE p.is_in_force
 GROUP BY 1, 2, 3, 4, 5;

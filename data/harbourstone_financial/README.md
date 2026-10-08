@@ -7,7 +7,7 @@ insurance**.
 
 | File | Platform | Contains |
 |---|---|---|
-| [`databricks/harbourstone_financial.sql`](databricks/harbourstone_financial.sql) | Databricks | Catalog `harbourstone`: schemas `retail_banking`, `commercial_banking`, `insurance` |
+| [`databricks/harbourstone_financial.sql`](databricks/harbourstone_financial.sql) | Databricks | Your catalog (for example `harbourstone`): schemas `retail_banking`, `commercial_banking`, `insurance` |
 | [`redshift/harbourstone_hr.sql`](redshift/harbourstone_hr.sql) | Redshift | Schema `harbourstone` in database `hr` |
 | [`bigquery/harbourstone_marketing.sql`](bigquery/harbourstone_marketing.sql) | BigQuery | Dataset `harbourstone_marketing` |
 
@@ -25,7 +25,7 @@ layers and regions.
 - Every silver and gold table has `region` (`APAC`, `EMEA`, `AMER`) and
   `country`.
 
-## Retail banking (`harbourstone.retail_banking`)
+## Retail banking (`retail_banking`)
 
 Sources: core banking (CBS), card management, lending, CRM, a KYC vendor and
 the anti-money laundering (AML) engine.
@@ -55,7 +55,7 @@ bands, AUD amounts, loan-to-value, arrears buckets, days open).
 | `gold_aml_overview` | Day, rule, risk level, status and region |
 | `gold_home_loan_portfolio` | Region, state, rate type and arrears bucket, with LVR |
 
-## Commercial banking (`harbourstone.commercial_banking`)
+## Commercial banking (`commercial_banking`)
 
 Source: the commercial lending system (LoanIQ). Each business has a risk
 grade from 1 (strong) to 10 (default); higher grades come with more arrears,
@@ -78,7 +78,7 @@ covenant breaches and more worrying analyst commentary.
 | `gold_portfolio_by_industry` | Industry and region: exposure, average grade, high-risk borrowers, breaches and arrears |
 | `gold_arrears_monthly` | Month, facility type and region: repayments due, paid, late and missed |
 
-## Insurance (`harbourstone.insurance`)
+## Insurance (`insurance`)
 
 Source: the policy and claims system (Guidewire). Motor and home cover in
 Australia, New Zealand and Singapore.

@@ -12,11 +12,11 @@
 -- ----------------------------------------------------------------------------
 -- Setup
 -- Datasets are created in the project selected in the BigQuery console,
--- in australia-southeast1 (Sydney). Change the location below if needed.
+-- in the project's default location.
 -- ----------------------------------------------------------------------------
 
 CREATE SCHEMA IF NOT EXISTS harbourstone_marketing
-OPTIONS (location = 'australia-southeast1', description = 'Harbourstone Financial Group Marketing');
+OPTIONS (description = 'Harbourstone Financial Group Marketing');
 
 -- ============================================================================
 -- Harbourstone Financial Group Marketing (harbourstone_marketing)
@@ -3282,8 +3282,8 @@ SELECT
   e.page_path,
   JSON_VALUE(e.event_params, '$.product') AS product_code,
   JSON_VALUE(e.event_params, '$.form_name') AS form_name,
-  CAST(JSON_VALUE(e.event_params, '$.calculator_amount') AS NUMERIC(14,2)) AS calculator_amount,
-  CAST(JSON_VALUE(e.event_params, '$.application_value') AS NUMERIC(14,2)) AS application_value,
+  CAST(JSON_VALUE(e.event_params, '$.calculator_amount') AS NUMERIC) AS calculator_amount,
+  CAST(JSON_VALUE(e.event_params, '$.application_value') AS NUMERIC) AS application_value,
   s.campaign_id,
   s.traffic_source,
   s.traffic_medium,
@@ -3396,13 +3396,13 @@ SELECT
   COALESCE(sp.cost_aud, 0) AS spend_aud,
   COALESCE(sp.impressions, 0) AS impressions,
   COALESCE(sp.clicks, 0) AS clicks,
-  ROUND(CAST(sp.clicks AS NUMERIC(18,4)) * 100 / NULLIF(sp.impressions, 0), 1) AS click_through_rate_pct,
+  ROUND(CAST(sp.clicks AS NUMERIC) * 100 / NULLIF(sp.impressions, 0), 1) AS click_through_rate_pct,
   COALESCE(se.sessions, 0) AS sessions,
   COALESCE(l.leads, 0) AS leads,
   COALESCE(a.applications, 0) AS applications,
   COALESCE(a.application_value, 0) AS application_value_aud,
-  CAST(sp.cost_aud / NULLIF(l.leads, 0) AS NUMERIC(18,2)) AS cost_per_lead_aud,
-  CAST(sp.cost_aud / NULLIF(a.applications, 0) AS NUMERIC(18,2)) AS cost_per_application_aud
+  ROUND(CAST(sp.cost_aud / NULLIF(l.leads, 0) AS NUMERIC), 2) AS cost_per_lead_aud,
+  ROUND(CAST(sp.cost_aud / NULLIF(a.applications, 0) AS NUMERIC), 2) AS cost_per_application_aud
 FROM harbourstone_marketing.silver_campaigns c
 LEFT JOIN spend sp ON sp.campaign_id = c.campaign_id
 LEFT JOIN sessions se ON se.campaign_id = c.campaign_id
@@ -3450,7 +3450,7 @@ SELECT
   SUM(CASE WHEN ws.is_engaged THEN 1 ELSE 0 END) AS engaged_sessions,
   SUM(COALESCE(l.leads, 0)) AS leads,
   SUM(COALESCE(c.converted, 0)) AS applications,
-  ROUND(CAST(SUM(COALESCE(c.converted, 0)) AS NUMERIC(18,4)) * 100 / NULLIF(COUNT(*), 0), 1) AS conversion_rate_pct
+  ROUND(CAST(SUM(COALESCE(c.converted, 0)) AS NUMERIC) * 100 / NULLIF(COUNT(*), 0), 1) AS conversion_rate_pct
 FROM harbourstone_marketing.silver_web_sessions ws
 LEFT JOIN conversions c ON c.session_id = ws.session_id
 LEFT JOIN leads l ON l.session_id = ws.session_id

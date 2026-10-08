@@ -36,6 +36,10 @@ class Dialect:
     def decimal_type(self, precision_scale: str) -> str:
         return f"DECIMAL({precision_scale})"
 
+    def cast_type(self, logical: str) -> str:
+        """The type to use in CAST, which some platforms spell differently."""
+        return self.type(logical)
+
     # Literals ----------------------------------------------------------------
 
     def literal(self, value) -> str:
@@ -99,7 +103,7 @@ class Dialect:
     def pct(self, numerator: str, denominator: str) -> str:
         """numerator / denominator as a percentage to 1 decimal place, NULL
         when the denominator is 0. Casts first: Redshift divides integers."""
-        return f"ROUND(CAST({numerator} AS {self.type('decimal(18,4)')}) * 100 / NULLIF({denominator}, 0), 1)"
+        return f"ROUND(CAST({numerator} AS {self.cast_type('decimal(18,4)')}) * 100 / NULLIF({denominator}, 0), 1)"
 
     def money(self, expr: str) -> str:
         return f"CAST({expr} AS {self.type('decimal(18,2)')})"
@@ -138,6 +142,11 @@ class Databricks(Dialect):
     key = "databricks"
     title = "Databricks"
     today = "current_date()"
+    # Tables go in the catalog selected when the script runs, so it works in a
+    # shared workspace where each person has their own catalog.
+    three_part_names = False
+    # Shared or built-in catalogs the script refuses to write to.
+    protected_catalogs = ("hive_metastore", "main", "samples", "system", "workspace")
     types = {
         "string": "STRING", "text": "STRING", "json": "STRING", "int": "INT", "bigint": "BIGINT",
         "date": "DATE", "timestamp": "TIMESTAMP", "bool": "BOOLEAN",
@@ -165,13 +174,18 @@ class Databricks(Dialect):
 
     def setup(self, script: Script) -> tuple[list[str], list[str]]:
         notes = [
-            "Needs Unity Catalog. If CREATE CATALOG fails because the metastore has no",
-            "storage root, add MANAGED LOCATION '<your cloud storage path>' to it.",
+            "Needs Unity Catalog. Tables are created in the current catalog: select",
+            "your own catalog first (the catalog picker in the SQL editor or DBeaver,",
+            f"or USE CATALOG <your catalog>), for example {script.container}. The first",
+            "statement stops the script if a shared or built-in catalog is selected.",
         ]
-        statements = [f"CREATE CATALOG IF NOT EXISTS {script.container}{self.table_comment(script.title)};"]
+        protected = ", ".join(self.string(c) for c in self.protected_catalogs)
+        statements = [
+            f"SELECT assert_true(current_catalog() NOT IN ({protected}),\n"
+            f"  'Select your own catalog (USE CATALOG <your catalog>) before running this script.');"
+        ]
         statements += [
-            f"CREATE SCHEMA IF NOT EXISTS {script.container}.{s.name}{self.table_comment(s.title)};"
-            for s in script.schemas
+            f"CREATE SCHEMA IF NOT EXISTS {s.name}{self.table_comment(s.title)};" for s in script.schemas
         ]
         return notes, statements
 
@@ -290,7 +304,6 @@ class BigQuery(Dialect):
     title = "BigQuery"
     today = "CURRENT_DATE()"
     three_part_names = False
-    location = "australia-southeast1"
     types = {
         "string": "STRING", "text": "STRING", "json": "STRING", "int": "INT64", "bigint": "INT64",
         "date": "DATE", "timestamp": "TIMESTAMP", "bool": "BOOL",
@@ -298,6 +311,13 @@ class BigQuery(Dialect):
 
     def decimal_type(self, precision_scale: str) -> str:
         return f"NUMERIC({precision_scale})"
+
+    def cast_type(self, logical: str) -> str:
+        # BigQuery rejects parameterized types such as NUMERIC(18,2) in CAST.
+        return "NUMERIC" if logical.startswith("decimal(") else self.type(logical)
+
+    def money(self, expr: str) -> str:
+        return f"ROUND(CAST({expr} AS NUMERIC), 2)"
 
     def decimal_literal(self, value: Decimal) -> str:
         return f"NUMERIC '{value}'"
@@ -327,11 +347,10 @@ class BigQuery(Dialect):
     def setup(self, script: Script) -> tuple[list[str], list[str]]:
         notes = [
             "Datasets are created in the project selected in the BigQuery console,",
-            f"in {self.location} (Sydney). Change the location below if needed.",
+            "in the project's default location.",
         ]
         statements = [
-            f"CREATE SCHEMA IF NOT EXISTS {s.name}\n"
-            f"OPTIONS (location = '{self.location}', description = {self.string(s.title)});"
+            f"CREATE SCHEMA IF NOT EXISTS {s.name}\nOPTIONS (description = {self.string(s.title)});"
             for s in script.schemas
         ]
         return notes, statements

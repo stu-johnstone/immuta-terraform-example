@@ -443,7 +443,7 @@ SELECT
   department_name,
   region,
   COUNT(*) AS reviews,
-  ROUND(AVG(CAST(rating AS {s.d.type('decimal(4,2)')})), 2) AS avg_rating,
+  ROUND(AVG(CAST(rating AS {s.d.cast_type('decimal(4,2)')})), 2) AS avg_rating,
   SUM(CASE WHEN rating >= 4 THEN 1 ELSE 0 END) AS high_performers,
   SUM(CASE WHEN rating <= 2 THEN 1 ELSE 0 END) AS low_performers
 FROM {s.ref('silver_performance_reviews')}
