@@ -1,4 +1,4 @@
-.PHONY: init fmt validate workspace plan apply destroy
+.PHONY: init fmt validate workspace plan apply destroy data data-test
 
 ENVIRONMENT ?= non-prod
 
@@ -30,3 +30,12 @@ apply: workspace
 
 destroy: workspace
 	terraform destroy -var-file=$(VAR_FILE) $(APPROVE_FLAG)
+
+# Demo data (see data/README.md): regenerate the SQL files, and test them.
+DATAGEN = uv run --project data/generator
+
+data:
+	$(DATAGEN) datagen
+
+data-test:
+	$(DATAGEN) pytest data/generator/tests
