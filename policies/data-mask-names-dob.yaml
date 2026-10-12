@@ -1,0 +1,29 @@
+# PII is masked by default. Names and dates of birth are hashed, so duplicate
+# records still match exactly, unless the user has been approved to see them:
+# Brian's approval of Cassandra's request gives her the PII Access attribute
+# (see locals.tf).
+name: Mask names and dates of birth
+policyKey: data mask names dob
+type: data
+actions:
+  - rules:
+      - type: Masking
+        exceptions:
+          operator: any
+          attributes:
+            - name: PII Access
+              value: Names and Dates of Birth
+        config:
+          fields:
+            - type: columnTags
+              columnTag: PII.Name
+            - type: columnTags
+              columnTag: PII.Date of Birth
+          maskingConfig:
+            type: Hash
+circumstanceOperator: any
+circumstances:
+  - type: columnTags
+    columnTag: PII.Name
+  - type: columnTags
+    columnTag: PII.Date of Birth

@@ -1,0 +1,19 @@
+# Cassandra: baseline access. Members of the Analytics group are subscribed to
+# every curated (silver and gold) table, which are the tables with a region
+# column. data-row-region.yaml limits the rows to their Region, and the
+# masking policies mask PII.
+name: Analytics baseline access
+policyKey: subscription analytics baseline
+type: subscription
+actions:
+  type: entitlements
+  entitlements:
+    operator: any
+    groups:
+      - Analytics
+  automaticSubscription: true
+  allowDiscovery: false
+  description: Analytics team members get the curated tables, limited to their region.
+circumstances:
+  - type: columnTags
+    columnTag: Data.Region

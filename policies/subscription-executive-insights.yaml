@@ -1,0 +1,17 @@
+# Alice: executives are entitled to the gold (business insight) tables only,
+# not to raw bronze or silver data. PII in gold stays masked.
+name: Executive business insights
+policyKey: subscription executive insights
+type: subscription
+actions:
+  type: entitlements
+  entitlements:
+    operator: any
+    groups:
+      - Executives
+  automaticSubscription: true
+  allowDiscovery: false
+  description: Executives get the business-ready gold tables.
+circumstances:
+  - type: tags
+    tag: Data Layer.Gold

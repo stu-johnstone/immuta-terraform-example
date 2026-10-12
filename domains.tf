@@ -28,3 +28,13 @@ resource "immuta_domain_identifier" "identifiers" {
   domain_id            = immuta_domain.domains[each.value.domain].id
   source_identifier_id = immuta_identifier.identifiers[each.value.identifier].id
 }
+
+# Every data source with one of the domain's tags is in the domain. The
+# business unit tags are applied to the Harbourstone schemas in
+# data_objects.tf.
+resource "immuta_domain_dynamic_assignment" "assignments" {
+  for_each = { for key, domain in local.domains : key => domain if length(domain.assignment_tags) > 0 }
+
+  domain_id = immuta_domain.domains[each.key].id
+  tags      = [for tag in each.value.assignment_tags : immuta_tag.tags[tag].name]
+}

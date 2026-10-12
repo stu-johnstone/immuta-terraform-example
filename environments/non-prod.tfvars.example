@@ -8,3 +8,7 @@ databricks_path = "/sql/1.0/warehouses/0000000000000000"
 
 # An existing Immuta user who owns the data objects connections register.
 data_owner_email = "data.owner@example.com"
+
+# Databricks catalog the Harbourstone Financial demo data was loaded into
+# (see data/README.md). Defaults to "harbourstone".
+# harbourstone_catalog = "harbourstone"

@@ -1,0 +1,27 @@
+# Contact details, government IDs and financial account numbers are redacted
+# for everyone, including executives and AI agents acting for them.
+name: Redact sensitive PII
+policyKey: data mask sensitive pii
+type: data
+actions:
+  - rules:
+      - type: Masking
+        config:
+          fields:
+            - type: columnTags
+              columnTag: PII.Contact Details
+            - type: columnTags
+              columnTag: PII.Government ID
+            - type: columnTags
+              columnTag: PII.Financial Account
+          maskingConfig:
+            type: Constant
+            constant: REDACTED
+circumstanceOperator: any
+circumstances:
+  - type: columnTags
+    columnTag: PII.Contact Details
+  - type: columnTags
+    columnTag: PII.Government ID
+  - type: columnTags
+    columnTag: PII.Financial Account

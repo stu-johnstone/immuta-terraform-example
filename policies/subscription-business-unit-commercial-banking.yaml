@@ -1,0 +1,22 @@
+# Brian: users whose BusinessUnit attribute is Commercial Banking get that business's
+# curated (silver and gold) tables. When the attribute changes, access changes
+# with it; the policy does not.
+name: Commercial Banking business unit access
+policyKey: subscription business unit commercial banking
+type: subscription
+actions:
+  type: entitlements
+  entitlements:
+    operator: any
+    attributes:
+      - name: BusinessUnit
+        value: Commercial Banking
+  automaticSubscription: true
+  allowDiscovery: false
+  description: Commercial Banking users get Commercial Banking curated tables, limited to their region.
+circumstanceOperator: all
+circumstances:
+  - type: tags
+    tag: Business Unit.Commercial Banking
+  - type: columnTags
+    columnTag: Data.Region

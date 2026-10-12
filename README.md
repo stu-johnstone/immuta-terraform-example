@@ -21,6 +21,24 @@ The example manages common Immuta resources:
 - Copying reference identifiers into a domain
 - Classification frameworks (tag sensitivity and classification rules)
 - A Databricks connection (structured so Snowflake and Trino can be added)
+- Data object settings and tags on the registered Harbourstone data
+- Dynamic domain assignment by tag
+- Global data and subscription policies, one YAML file each in `policies/`
+
+The users, groups, tags and policies implement the demo in `DEMO.md`, using
+the Harbourstone Financial data in `data/` (see `data/README.md`):
+
+- **Cassandra** (Analytics group, `Region` APAC) gets the curated tables,
+  only the APAC rows, with PII masked. Uncommenting her `PII Access`
+  attribute in `locals.tf` plays Brian's approval of unmasked names and
+  dates of birth.
+- **Brian** gets the tables of his `BusinessUnit`. Change it from
+  `Insurance` to `Retail Banking` in `locals.tf` and apply: his access
+  changes, the policies do not.
+- **Alice** (Executives group) gets the gold tables only, with PII masked.
+
+Load the Databricks data before applying: the Harbourstone schemas and
+gold tables are looked up in the connection to tag them.
 
 The configuration is deliberately data-driven. Example domains, users, groups,
 tags, identifiers, frameworks and connections are defined in `locals.tf`; each user and group lists its own attributes, and
@@ -57,6 +75,9 @@ Makefile passes the one matching `ENVIRONMENT` with `-var-file`:
 
     cp environments/non-prod.tfvars.example environments/non-prod.tfvars
 
+Set `harbourstone_catalog` there if the demo data is not in the
+`harbourstone` catalog.
+
 Connection secrets are supplied through Terraform variables set from
 `TF_VAR_` environment variables:
 
@@ -92,10 +113,13 @@ No Terraform backend is configured; state is stored locally for simplicity.
     ├── versions.tf     # Terraform and provider versions
     ├── provider.tf     # Environments and provider configuration
     ├── locals.tf       # Example data
-    ├── domains.tf      # Domains and identifiers copied into them
+    ├── domains.tf      # Domains, their tag assignment and copied identifiers
     ├── identifiers.tf  # Tags and identifiers
     ├── frameworks.tf   # Classification frameworks
     ├── connections.tf  # Data platform connections and their variables
+    ├── data_objects.tf # Settings and tags on the Harbourstone data objects
+    ├── policies.tf     # Global policies, one per file in policies/
+    ├── policies/       # Global policies in the Immuta V2 policy format (YAML)
     ├── environments/   # <environment>.tfvars settings (gitignored) and templates
     ├── users.tf        # Users and user attributes
     ├── groups.tf       # Groups, group attributes and memberships
