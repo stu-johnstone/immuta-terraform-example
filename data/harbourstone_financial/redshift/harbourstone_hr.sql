@@ -18,7 +18,7 @@
 -- ----------------------------------------------------------------------------
 
 CREATE SCHEMA IF NOT EXISTS harbourstone;
-
+SET search_path TO harbourstone;
 -- ============================================================================
 -- Harbourstone Financial Group HR (harbourstone)
 -- HR data for Harbourstone Financial Group from its HR and payroll systems.

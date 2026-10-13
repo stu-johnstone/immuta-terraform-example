@@ -5,7 +5,7 @@ policyKey: data row region
 type: data
 actions:
   - rules:
-      - type: RowRedaction
+      - type: Row Restriction by Custom Where Clause
         config:
           predicate: "@attributeValuesContains('Region', @columnTagged('Data.Region'))"
 circumstances:
