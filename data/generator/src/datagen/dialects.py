@@ -280,23 +280,18 @@ class Redshift(Dialect):
             f"  CREATE DATABASE {script.container};",
             "Redshift has no CREATE OR REPLACE TABLE, so tables are dropped and recreated.",
         ]
-        return notes, [f"CREATE SCHEMA IF NOT EXISTS {s.name};" for s in script.schemas]
+        statements = [f"CREATE SCHEMA IF NOT EXISTS {s.name};" for s in script.schemas]
+        statements += [f"SET search_path TO {', '.join(s.name for s in script.schemas)};"]
+        return notes, statements
 
+    # No COMMENT ON: Redshift rejects it in some sessions ("Operation is not
+    # supported through datashares"). Descriptions stay in the script comments.
     def create_table(self, name: str, table: Table) -> list[str]:
         columns = ",\n".join(f"  {c.name} {self.type(c.type)}" for c in table.columns)
-        statements = [f"DROP TABLE IF EXISTS {name};", f"CREATE TABLE {name} (\n{columns}\n);"]
-        statements.append(f"COMMENT ON TABLE {name} IS {self.string(table.comment)};")
-        statements += [
-            f"COMMENT ON COLUMN {name}.{c.name} IS {self.string(c.comment)};" for c in table.columns if c.comment
-        ]
-        return statements
+        return [f"DROP TABLE IF EXISTS {name};", f"CREATE TABLE {name} (\n{columns}\n);"]
 
     def create_table_as(self, name: str, comment: str, select: str) -> list[str]:
-        return [
-            f"DROP TABLE IF EXISTS {name};",
-            f"CREATE TABLE {name}\nAS\n{select.strip()};",
-            f"COMMENT ON TABLE {name} IS {self.string(comment)};",
-        ]
+        return [f"DROP TABLE IF EXISTS {name};", f"CREATE TABLE {name}\nAS\n{select.strip()};"]
 
 
 class BigQuery(Dialect):

@@ -40,9 +40,15 @@ def test_runs_end_to_end(script):
 def test_parses_for_platform(script):
     dialect = DIALECTS[script.platform]
     for statement in statements(script, dialect):
-        if statement.startswith("COMMENT ON"):
-            continue  # not modelled by sqlglot
         sqlglot.parse_one(statement, read=script.platform)
+
+
+@pytest.mark.parametrize("script", [s for s in SCRIPTS if s.platform == "redshift"], ids=lambda s: s.path)
+def test_redshift_has_no_comment_on(script):
+    """Redshift rejects COMMENT ON in some sessions ("Operation is not
+    supported through datashares"), which stops the script part way."""
+    for statement in statements(script, DIALECTS["redshift"]):
+        assert not statement.startswith("COMMENT ON"), statement[:200]
 
 
 @pytest.mark.parametrize("script", [s for s in SCRIPTS if s.platform == "databricks"], ids=lambda s: s.path)

@@ -18,7 +18,9 @@
 -- ----------------------------------------------------------------------------
 
 CREATE SCHEMA IF NOT EXISTS harbourstone;
+
 SET search_path TO harbourstone;
+
 -- ============================================================================
 -- Harbourstone Financial Group HR (harbourstone)
 -- HR data for Harbourstone Financial Group from its HR and payroll systems.
@@ -43,8 +45,6 @@ CREATE TABLE harbourstone.bronze_departments (
   _source_system VARCHAR(256),
   _batch_id VARCHAR(256)
 );
-
-COMMENT ON TABLE harbourstone.bronze_departments IS 'Departments and business units from the HR system (HRIS).';
 
 INSERT INTO harbourstone.bronze_departments (department_id, department_name, business_unit, cost_centre, head_employee_id, _source_system, _batch_id) VALUES
   ('D01', 'Executive Office', 'EXECUTIVE', 'CC1010', 'HFG00001', 'HRIS', 'hris-nightly'),
@@ -109,30 +109,6 @@ CREATE TABLE harbourstone.bronze_employees (
   _source_system VARCHAR(256),
   _batch_id VARCHAR(256)
 );
-
-COMMENT ON TABLE harbourstone.bronze_employees IS 'Employee master records from the HR system (HRIS). Raw values: gender and country spellings vary.';
-
-COMMENT ON COLUMN harbourstone.bronze_employees.first_name IS 'Person name';
-
-COMMENT ON COLUMN harbourstone.bronze_employees.last_name IS 'Person name';
-
-COMMENT ON COLUMN harbourstone.bronze_employees.date_of_birth IS 'PII: date of birth';
-
-COMMENT ON COLUMN harbourstone.bronze_employees.gender IS 'Sensitive: gender';
-
-COMMENT ON COLUMN harbourstone.bronze_employees.personal_email IS 'PII: personal email';
-
-COMMENT ON COLUMN harbourstone.bronze_employees.mobile_phone IS 'PII: phone number';
-
-COMMENT ON COLUMN harbourstone.bronze_employees.home_address IS 'PII: home address';
-
-COMMENT ON COLUMN harbourstone.bronze_employees.tax_id IS 'Highly sensitive: national tax ID (TFN, IRD, NRIC or NI number)';
-
-COMMENT ON COLUMN harbourstone.bronze_employees.bank_bsb IS 'Financial: salary account BSB';
-
-COMMENT ON COLUMN harbourstone.bronze_employees.bank_account_number IS 'Financial: salary account number';
-
-COMMENT ON COLUMN harbourstone.bronze_employees.termination_reason IS 'Sensitive: reason for leaving';
 
 INSERT INTO harbourstone.bronze_employees (employee_id, first_name, last_name, preferred_name, date_of_birth, gender, personal_email, work_email, mobile_phone, home_address, suburb, state, postcode, country, tax_id, tax_id_type, bank_bsb, bank_account_number, department_id, position_title, manager_id, employment_type, hire_date, termination_date, termination_reason, work_location, _source_system, _batch_id) VALUES
   ('HFG00001', 'Priya', 'Wang', NULL, DATE '1982-11-26', 'Non-binary', 'priya.wang23@example.org', 'priya.wang@harbourstone.example.com', '0491 570 307', '136 Flinders Street', 'Fremantle', 'WA', '6160', 'Australia', '325682141', 'TFN', '082-705', '23219693', 'D01', 'Chief Executive Officer', NULL, 'FULL_TIME', CAST(DATEADD(day, -1259, CURRENT_DATE) AS DATE), NULL, NULL, 'Perth', 'HRIS', 'hris-nightly'),
@@ -396,10 +372,6 @@ CREATE TABLE harbourstone.bronze_compensation (
   _source_system VARCHAR(256),
   _batch_id VARCHAR(256)
 );
-
-COMMENT ON TABLE harbourstone.bronze_compensation IS 'Salary history from the HR system: one row per change.';
-
-COMMENT ON COLUMN harbourstone.bronze_compensation.base_salary IS 'Sensitive: salary, in local currency';
 
 INSERT INTO harbourstone.bronze_compensation (comp_id, employee_id, effective_date, base_salary, currency, bonus_target_pct, super_rate_pct, pay_grade, change_reason, _source_system, _batch_id) VALUES
   ('CMP000001', 'HFG00001', CAST(DATEADD(day, -1259, CURRENT_DATE) AS DATE), 418000, 'AUD', 40.0, 11.5, 'G9', 'New hire', 'HRIS', 'hris-nightly'),
@@ -745,12 +717,6 @@ CREATE TABLE harbourstone.bronze_payroll (
   _source_system VARCHAR(256),
   _batch_id VARCHAR(256)
 );
-
-COMMENT ON TABLE harbourstone.bronze_payroll IS 'Payslips for the last four fortnightly pay runs, from the payroll system.';
-
-COMMENT ON COLUMN harbourstone.bronze_payroll.gross_pay IS 'Sensitive: pay';
-
-COMMENT ON COLUMN harbourstone.bronze_payroll.net_pay IS 'Sensitive: pay';
 
 INSERT INTO harbourstone.bronze_payroll (payslip_id, employee_id, pay_period_end, gross_pay, tax_withheld, super_contribution, net_pay, currency, _source_system, _batch_id) VALUES
   ('PAY000001', 'HFG00001', CAST(DATEADD(day, -3, CURRENT_DATE) AS DATE), 16076.92, 4983.85, 1848.85, 11093.07, 'AUD', 'PAYROLL', 'pay-run'),
@@ -1630,10 +1596,6 @@ CREATE TABLE harbourstone.bronze_leave_requests (
   _batch_id VARCHAR(256)
 );
 
-COMMENT ON TABLE harbourstone.bronze_leave_requests IS 'Leave requests from the HR system, past and upcoming.';
-
-COMMENT ON COLUMN harbourstone.bronze_leave_requests.reason IS 'Free text: may contain health information';
-
 INSERT INTO harbourstone.bronze_leave_requests (leave_id, employee_id, leave_type, start_date, end_date, days_taken, leave_status, reason, _source_system, _batch_id) VALUES
   ('LV000001', 'HFG00193', 'CARERS', CAST(DATEADD(day, -22, CURRENT_DATE) AS DATE), CAST(DATEADD(day, -19, CURRENT_DATE) AS DATE), 3, 'APPROVED', 'Caring for child with chickenpox', 'HRIS', 'hris-nightly'),
   ('LV000002', 'HFG00193', 'ANNUAL', CAST(DATEADD(day, -96, CURRENT_DATE) AS DATE), CAST(DATEADD(day, -89, CURRENT_DATE) AS DATE), 7, 'APPROVED', 'Wedding in Melbourne', 'HRIS', 'hris-nightly'),
@@ -2039,12 +2001,6 @@ CREATE TABLE harbourstone.bronze_performance_reviews (
   _batch_id VARCHAR(256)
 );
 
-COMMENT ON TABLE harbourstone.bronze_performance_reviews IS 'Annual performance reviews written by managers.';
-
-COMMENT ON COLUMN harbourstone.bronze_performance_reviews.rating IS '1 (did not meet) to 5 (outstanding)';
-
-COMMENT ON COLUMN harbourstone.bronze_performance_reviews.review_text IS 'Free text: performance and sometimes health details';
-
 INSERT INTO harbourstone.bronze_performance_reviews (review_id, employee_id, reviewer_id, review_period, rating, review_text, _source_system, _batch_id) VALUES
   ('RV000001', 'HFG00002', 'HFG00001', 'FY2026', 3, 'Oliver met expectations in Branch Network. Reliable delivery; would benefit from taking on a cross-team project next year.', 'HRIS', 'hris-nightly'),
   ('RV000002', 'HFG00003', 'HFG00001', 'FY2026', 5, 'James had an outstanding year, exceeding every objective. Led the Contact Centre uplift and mentored two new starters. Ready for promotion.', 'HRIS', 'hris-nightly'),
@@ -2296,12 +2252,6 @@ CREATE TABLE harbourstone.bronze_emergency_contacts (
   _source_system VARCHAR(256),
   _batch_id VARCHAR(256)
 );
-
-COMMENT ON TABLE harbourstone.bronze_emergency_contacts IS 'Next of kin and emergency contacts.';
-
-COMMENT ON COLUMN harbourstone.bronze_emergency_contacts.contact_name IS 'Person name';
-
-COMMENT ON COLUMN harbourstone.bronze_emergency_contacts.phone IS 'PII: phone number';
 
 INSERT INTO harbourstone.bronze_emergency_contacts (contact_id, employee_id, contact_name, relationship, phone, _source_system, _batch_id) VALUES
   ('EC000001', 'HFG00001', 'Minh Singh', 'Spouse', '0491 570 597', 'HRIS', 'hris-nightly'),
@@ -2595,8 +2545,6 @@ WITH base AS (
 SELECT base.*, CASE WHEN base.country IN ('AU', 'NZ', 'SG', 'JP', 'IN', 'MY', 'ID', 'HK') THEN 'APAC' WHEN base.country IN ('GB', 'IE', 'DE', 'FR', 'NL', 'AE', 'ZA') THEN 'EMEA' WHEN base.country IN ('US', 'CA', 'MX', 'BR') THEN 'AMER' ELSE 'UNKNOWN' END AS region
 FROM base;
 
-COMMENT ON TABLE harbourstone.silver_employees IS 'Cleaned employees with department, age, tenure, active flag and region.';
-
 -- silver_compensation: Salary history with AUD equivalent; is_current marks
 -- each employee's current salary.
 
@@ -2629,8 +2577,6 @@ SELECT
 FROM ranked c
 JOIN harbourstone.silver_employees e ON e.employee_id = c.employee_id;
 
-COMMENT ON TABLE harbourstone.silver_compensation IS 'Salary history with AUD equivalent; is_current marks each employee''s current salary.';
-
 -- silver_payroll: Payslips with department, region and AUD equivalent.
 
 DROP TABLE IF EXISTS harbourstone.silver_payroll;
@@ -2654,8 +2600,6 @@ SELECT
 FROM harbourstone.bronze_payroll p
 JOIN harbourstone.silver_employees e ON e.employee_id = p.employee_id;
 
-COMMENT ON TABLE harbourstone.silver_payroll IS 'Payslips with department, region and AUD equivalent.';
-
 -- silver_leave_requests: Leave requests with department, region and month.
 
 DROP TABLE IF EXISTS harbourstone.silver_leave_requests;
@@ -2678,8 +2622,6 @@ SELECT
   e.region
 FROM harbourstone.bronze_leave_requests l
 JOIN harbourstone.silver_employees e ON e.employee_id = l.employee_id;
-
-COMMENT ON TABLE harbourstone.silver_leave_requests IS 'Leave requests with department, region and month.';
 
 -- silver_performance_reviews: Performance reviews with employee and reviewer
 -- names.
@@ -2705,8 +2647,6 @@ FROM harbourstone.bronze_performance_reviews v
 JOIN harbourstone.silver_employees e ON e.employee_id = v.employee_id
 LEFT JOIN harbourstone.silver_employees m ON m.employee_id = v.reviewer_id;
 
-COMMENT ON TABLE harbourstone.silver_performance_reviews IS 'Performance reviews with employee and reviewer names.';
-
 -- ----------------------------------------------------------------------------
 -- Gold: business-ready data products for reporting and AI. Built from silver.
 -- ----------------------------------------------------------------------------
@@ -2731,8 +2671,6 @@ SELECT
 FROM harbourstone.silver_employees
 GROUP BY 1, 2, 3, 4;
 
-COMMENT ON TABLE harbourstone.gold_headcount IS 'Active headcount, tenure, hires, leavers and attrition by department and region.';
-
 -- gold_pay_equity: Current salaries (AUD) by grade, business unit, gender and
 -- region, for pay equity analysis.
 
@@ -2753,8 +2691,6 @@ FROM harbourstone.silver_compensation
 WHERE is_current AND is_active
 GROUP BY 1, 2, 3, 4;
 
-COMMENT ON TABLE harbourstone.gold_pay_equity IS 'Current salaries (AUD) by grade, business unit, gender and region, for pay equity analysis.';
-
 -- gold_leave_summary: Leave requests and approved days by month, type,
 -- business unit and region.
 
@@ -2772,8 +2708,6 @@ SELECT
   SUM(CASE WHEN leave_status = 'PENDING' THEN 1 ELSE 0 END) AS pending_requests
 FROM harbourstone.silver_leave_requests
 GROUP BY 1, 2, 3, 4;
-
-COMMENT ON TABLE harbourstone.gold_leave_summary IS 'Leave requests and approved days by month, type, business unit and region.';
 
 -- gold_performance_summary: Review ratings by department and region: averages
 -- and high and low performers.
@@ -2793,5 +2727,3 @@ SELECT
   SUM(CASE WHEN rating <= 2 THEN 1 ELSE 0 END) AS low_performers
 FROM harbourstone.silver_performance_reviews
 GROUP BY 1, 2, 3, 4;
-
-COMMENT ON TABLE harbourstone.gold_performance_summary IS 'Review ratings by department and region: averages and high and low performers.';
