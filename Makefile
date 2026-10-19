@@ -23,7 +23,7 @@ workspace: init
 		terraform workspace new $(ENVIRONMENT)
 
 plan: workspace
-	terraform plan -var-file=$(VAR_FILE)
+	TF_LOG_PROVIDER=DEBUG TF_LOG_PATH=./tf.log terraform plan -var-file=$(VAR_FILE)
 
 apply: workspace
 	terraform apply -var-file=$(VAR_FILE) $(APPROVE_FLAG)
