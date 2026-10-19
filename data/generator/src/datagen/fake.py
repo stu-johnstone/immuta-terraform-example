@@ -7,8 +7,9 @@ range exists it is used:
   are ranges set aside for fiction; AU mobiles use the 0491 570 block
 - cards: Luhn-valid numbers on the 411111 and 555555 test prefixes
 
-Tax file numbers and ABNs pass their checksums, so discovery recognises
-them; they are random and must only be used as demo data.
+Tax file numbers, ABNs, Medicare numbers, IHIs and NZ NHI numbers pass
+their checksums, so discovery recognises them; they are random and must
+only be used as demo data.
 
 Each table gets its own random generator seeded from its name, so changing
 one table does not change the data in any other.
@@ -204,6 +205,35 @@ def passport(r: random.Random, country: str) -> str:
     if country == "SG":
         return f"K{digits(r, 7)}{r.choice('ABCDEFGHJ')}"
     return digits(r, 9)
+
+
+def medicare_number(r: random.Random) -> str:
+    """An Australian Medicare card number that passes the checksum: eight
+    digits starting 2 to 6, a check digit and an issue number."""
+    body = [r.randint(2, 6)] + [r.randint(0, 9) for _ in range(7)]
+    check = sum(d * w for d, w in zip(body, (1, 3, 7, 9, 1, 3, 7, 9))) % 10
+    value = "".join(map(str, body)) + str(check) + str(r.randint(1, 9))
+    return value if chance(r, 0.6) else f"{value[:4]} {value[4:9]} {value[9]}"
+
+
+def ihi(r: random.Random) -> str:
+    """An Australian Individual Healthcare Identifier: 16 digits starting
+    800360, Luhn-valid."""
+    value = luhn_number(r, "800360")
+    return f"{value[:4]} {value[4:8]} {value[8:12]} {value[12:]}"
+
+
+def nhi(r: random.Random) -> str:
+    """A New Zealand National Health Index number (AAA9999) that passes the
+    checksum."""
+    letters = "ABCDEFGHJKLMNPQRSTUVWXYZ"  # no I or O
+    while True:
+        chars = [r.choice(letters) for _ in range(3)] + [str(r.randint(0, 9)) for _ in range(3)]
+        values = [letters.index(c) + 1 if c.isalpha() else int(c) for c in chars]
+        remainder = sum(v * w for v, w in zip(values, (7, 6, 5, 4, 3, 2))) % 11
+        check = 11 - remainder
+        if remainder and check != 10:
+            return "".join(chars) + str(check % 10)
 
 
 def drivers_licence(r: random.Random) -> str:

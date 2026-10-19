@@ -64,6 +64,17 @@ def test_databricks_uses_current_catalog(script):
             assert f"{script.container}.{schema.name}" not in statement
 
 
+@pytest.mark.parametrize("script", [s for s in SCRIPTS if s.platform == "snowflake"], ids=lambda s: s.path)
+def test_snowflake_uses_current_database(script):
+    """Each person has their own database in a shared account, so scripts
+    never create or name a database."""
+    for statement in statements(script, DIALECTS["snowflake"]):
+        assert not statement.startswith("CREATE DATABASE"), statement[:200]
+        assert not statement.startswith("USE "), statement[:200]
+        for schema in script.schemas:
+            assert f"{script.container}.{schema.name}" not in statement, statement[:200]
+
+
 @pytest.mark.parametrize("script", [s for s in SCRIPTS if s.platform == "bigquery"], ids=lambda s: s.path)
 def test_bigquery_casts_are_not_parameterized(script):
     """BigQuery rejects types such as NUMERIC(18,2) in CAST; sqlglot accepts them."""

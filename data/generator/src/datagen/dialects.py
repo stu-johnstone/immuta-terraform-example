@@ -199,6 +199,9 @@ class Databricks(Dialect):
 class Snowflake(Dialect):
     key = "snowflake"
     title = "Snowflake"
+    # Tables go in the database selected when the script runs, so it works in
+    # a shared account where each person has their own database.
+    three_part_names = False
     types = {
         "string": "VARCHAR", "text": "VARCHAR", "json": "VARCHAR", "int": "INT", "bigint": "BIGINT",
         "date": "DATE", "timestamp": "TIMESTAMP_NTZ", "bool": "BOOLEAN",
@@ -227,14 +230,14 @@ class Snowflake(Dialect):
 
     def setup(self, script: Script) -> tuple[list[str], list[str]]:
         notes = [
-            "Run with a role that can create databases, with a warehouse selected",
-            "(USE WAREHOUSE <your warehouse>). Unquoted names are stored in upper case.",
+            "Tables are created in the current database: select your own database",
+            "first (the database picker in the worksheet or DBeaver, or",
+            f"USE DATABASE <your database>), for example {script.container}. Snowflake stops",
+            "the script if no database is selected. Needs a role that can create",
+            "schemas in it and a warehouse (USE WAREHOUSE <your warehouse>).",
+            "Unquoted names are stored in upper case.",
         ]
-        statements = [f"CREATE DATABASE IF NOT EXISTS {script.container}{self.table_comment(script.title)};"]
-        statements += [
-            f"CREATE SCHEMA IF NOT EXISTS {script.container}.{s.name}{self.table_comment(s.title)};"
-            for s in script.schemas
-        ]
+        statements = [f"CREATE SCHEMA IF NOT EXISTS {s.name}{self.table_comment(s.title)};" for s in script.schemas]
         return notes, statements
 
     def column_comment(self, comment: str) -> str:

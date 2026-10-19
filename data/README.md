@@ -14,8 +14,8 @@ Everything here is made up. See [Is the data safe?](#is-the-data-safe).
 |---|---|---|---|
 | [Harbourstone Financial Group](harbourstone_financial/README.md) | Financial Services | retail_banking, commercial_banking, insurance | Done |
 | Northgrid Utilities | Utilities | energy, water, communications | Planned |
-| Vitalis Health Group | Health | health_insurance, hospitals, dental | Planned |
-| Forgeline Industries | Manufacturing | production, supply_chain, quality | Planned |
+| [Vitalis Health Group](vitalis_health/README.md) | Health | health_insurance, hospitals, dental | Done |
+| [Forgeline Industries](forgeline_industries/README.md) | Manufacturing | production, supply_chain, quality | Done |
 
 ## Where the data lives
 
@@ -24,11 +24,12 @@ Data is split by kind, so only four connectors are needed:
 | Platform | Data | Layout |
 |---|---|---|
 | Databricks | Financial Services and Utilities operational data | a catalog you choose per company, schema per business |
-| Snowflake | Health and Manufacturing operational data | database per company, schema per business |
+| Snowflake | Health and Manufacturing operational data | a database you choose per company, schema per business |
 | Redshift | HR for every company | database `hr`, schema per company |
 | BigQuery | Marketing for every company | dataset `<company>_marketing` |
 
 For example, `<your catalog>.commercial_banking.gold_risk_profile` (Databricks),
+`<your database>.hospitals.gold_patient_journey` (Snowflake),
 `hr.harbourstone.silver_employees` (Redshift) and
 `harbourstone_marketing.gold_campaign_performance` (BigQuery).
 
@@ -47,14 +48,14 @@ data/
 
 Each `.sql` file is self-contained: paste it into the platform's SQL editor
 and run it top to bottom. It creates the database, schemas or datasets it
-needs (Databricks uses the catalog you select), then the tables, and can be
+needs (Databricks uses the catalog you select, Snowflake the database), then the tables, and can be
 re-run; tables are replaced each time. Comments explain every step and every
 table.
 
 | Platform | Before running |
 |---|---|
 | Databricks | Needs Unity Catalog. Select your own catalog first (the catalog picker in the SQL editor or DBeaver, or `USE CATALOG <your catalog>;`), so it works in a shared workspace. The script stops if `main`, `workspace`, `hive_metastore`, `system` or `samples` is selected. |
-| Snowflake | Use a role that can create databases and select a warehouse. |
+| Snowflake | Select your own database first (the database picker in the worksheet or DBeaver, or `USE DATABASE <your database>;`), so it works in a shared account, and select a warehouse. The role needs to create schemas in that database. Snowflake stops the script if no database is selected. |
 | Redshift | Run `CREATE DATABASE hr;` once, then connect to `hr` and run the file. |
 | BigQuery | Select the project in the console. Datasets are created in the project's default location. |
 
@@ -112,10 +113,12 @@ reserved or test range exists, it is used:
 - IP addresses are in the documentation ranges (`192.0.2.x`, `198.51.100.x`,
   `203.0.113.x`).
 - Phone numbers use ranges set aside for fiction (AU `02/03 5550 xxxx`, UK
-  `07700 900xxx`, US `555-01xx`); AU mobiles use the `0491 570` block.
+  `07700 900xxx`, US `555-01xx`, Germany `030 23125 xxx`); AU mobiles use the
+  `0491 570` block.
 - Card numbers are on the `411111` and `555555` test prefixes.
 
-Tax file numbers and ABNs are random but pass their checksums, so Immuta's
+Tax file numbers, ABNs, Medicare numbers, IHIs and NZ NHI numbers are
+random but pass their checksums, so Immuta's
 discovery recognises them. They are not anyone's real numbers by design, but
 treat them as demo data only.
 
