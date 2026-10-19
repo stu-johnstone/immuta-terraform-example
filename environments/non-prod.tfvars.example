@@ -4,6 +4,9 @@
 # TF_VAR_databricks_token and TF_VAR_redshift_password environment variables,
 # and the Snowflake private key from a file (see README.md).
 
+# Immuta tenant this environment manages.
+immuta_host = "https://example.hosted.immutacloud.com/"
+
 databricks_host = "dbc-00000000-0000.cloud.databricks.com"
 databricks_path = "/sql/1.0/warehouses/0000000000000000"
 

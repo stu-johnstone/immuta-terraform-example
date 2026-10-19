@@ -45,13 +45,41 @@ tags, identifiers, frameworks and connections are defined in `locals.tf`; each u
 each group lists its members by user key. Resources use `for_each`, so adding an
 example means adding an entry to `locals.tf` rather than a new resource.
 
+## Entra test users
+
+To play the demo with identities from Microsoft Entra ID, create these test
+users and groups in Entra by hand. Terraform does not manage them. They mirror
+Cassandra, Brian and Alice. They have different names, user IDs and group names
+so that they stay separate from the Terraform-managed users and groups in
+`locals.tf`. Everything uses the `DEMO` prefix so that nobody mistakes them for
+real Immuta users.
+
+| Entra user (display name, UPN) | Plays | Groups | Attributes |
+|---|---|---|---|
+| `[DEMO] Diana Shaw`, `demo-diana.shaw@<tenant domain>` | Cassandra (analyst) | `DEMO-Immuta-Analytics`, `DEMO-Immuta-Users` | `Region` APAC. Add `PII Access` "Names and Dates of Birth" when her request is approved |
+| `[DEMO] Ethan Brooks`, `demo-ethan.brooks@<tenant domain>` | Brian (manager) | `DEMO-Immuta-Users` | `BusinessUnit` Insurance (change to Retail Banking during the demo), `Region` APAC |
+| `[DEMO] Fiona Grant`, `demo-fiona.grant@<tenant domain>` | Alice (CEO) | `DEMO-Immuta-Executives`, `DEMO-Immuta-Users` | `Region` APAC, EMEA and AMER |
+
+- Set Ethan as Diana's manager. In the story, he approves her request.
+- Assign only `DEMO-Immuta-Users` to the Immuta enterprise application. Then
+  provisioning and sign-in reach only the test users.
+- Attribute names must match the policies exactly: `Region`, `BusinessUnit`,
+  `PII Access`. `Region` takes more than one value for Fiona. How the
+  attributes reach Immuta depends on how the Entra integration is configured.
+- The subscription policies match the groups `Analytics` and `Executives` by
+  name. They do not match `DEMO-Immuta-Analytics` or `DEMO-Immuta-Executives`
+  until those group names are added to `policies/subscription-analytics.yaml`
+  and `policies/subscription-executive-insights.yaml`. Attribute-based
+  policies (region, business unit, PII access) apply to the Entra users as
+  they are.
+
 ## Environments
 
 Terraform workspaces represent environments.
 
 `non-prod` is the default and is the only environment required for this example.
-The environment configuration, including the Immuta host, is defined in
-`provider.tf`.
+Each environment's configuration, including the Immuta host (`immuta_host`),
+comes from `environments/<environment>.tfvars` (see Credentials below).
 
 For example:
 
@@ -67,7 +95,7 @@ The Immuta API key is supplied through:
 
     export IMMUTA_API_KEY="..."
 
-Non-secret settings you do not want to commit, such as connection hosts,
+Non-secret settings you do not want to commit, such as the Immuta host, connection hosts,
 usernames, the Databricks SQL warehouse path, the Snowflake warehouse and role,
 and the email of the user who owns connection data objects,
 go in a per-environment variables file,
@@ -88,6 +116,10 @@ Connection secrets are supplied through Terraform variables set from
 Before applying, create the Immuta user on each platform with the connection's
 setup script (Snowflake: a user with a key pair, a role and a warehouse;
 Redshift: a user with a password).
+
+On Redshift, unlike Snowflake and Databricks, the schemas must exist before
+the connection is created. Load the HR data (database `hr`, one schema per
+company; see `data/README.md`) before the first `make apply`.
 
 ### Snowflake key pair
 
@@ -124,9 +156,6 @@ Connections use `prevent_destroy`, because destroying a connection deletes
 every data object registered through it. `make destroy` fails until that is
 removed from `connections.tf`.
 
-The Immuta host is non-sensitive configuration and is defined per environment
-in `locals.tf`.
-
 ## Usage
 
     make init
@@ -146,7 +175,7 @@ No Terraform backend is configured; state is stored locally for simplicity.
     ├── Makefile
     ├── README.md
     ├── versions.tf     # Terraform and provider versions
-    ├── provider.tf     # Environments and provider configuration
+    ├── provider.tf     # Provider configuration and the Immuta host variable
     ├── locals.tf       # Example data
     ├── domains.tf      # Domains, their tag assignment and copied identifiers
     ├── identifiers.tf  # Tags and identifiers
