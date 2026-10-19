@@ -227,6 +227,70 @@ locals {
         }
       }
     }
+
+    # Vitalis Health and Forgeline Industries operational data. Run the
+    # connection's setup script in Snowflake first (the Immuta user, role and
+    # key pair); the Immuta API does not accept passwords for Snowflake.
+    # Cannot be updated in place: host, port, immutaSystemDatabase.
+    snowflake = {
+      technology = "Snowflake"
+
+      credential = {
+        authenticationType = "UnencryptedKeyPair"
+        username           = var.snowflake_username
+      }
+
+      configuration = {
+        clientConfiguration = {
+          host                 = var.snowflake_host
+          port                 = 443
+          warehouse            = var.snowflake_warehouse
+          role                 = var.snowflake_role
+          immutaSystemDatabase = "IMMUTA_STU_J"
+        }
+        auditConfiguration = {
+          enabled = false
+        }
+        dataObjectSync = {
+          enabled   = true
+          startTime = 0
+          schedule  = "EVERY_24_HOURS"
+        }
+        syncOnCreate = true
+        dataObjectDefaults = {
+          syncPolicy = false
+        }
+      }
+    }
+
+    # HR data for every company (database hr). Cannot be updated in place:
+    # host, port, immutaSystemDatabase.
+    redshift = {
+      technology = "Redshift"
+
+      credential = {
+        authenticationType = "UsernamePassword"
+        username           = var.redshift_username
+      }
+
+      configuration = {
+        clientConfiguration = {
+          host                 = var.redshift_host
+          port                 = 5439
+          sslMode              = "REQUIRE"
+          immutaSystemDatabase = "immuta_stu_j"
+        }
+        dataObjectSync = {
+          enabled   = true
+          startTime = 0
+          schedule  = "EVERY_24_HOURS"
+        }
+        syncOnCreate = true
+        dataObjectDefaults = {
+          syncPolicy = false
+        }
+      }
+    }
   }
 
   # The people in DEMO.md. In the demo their attributes come from Entra; here

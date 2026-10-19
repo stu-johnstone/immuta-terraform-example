@@ -20,7 +20,7 @@ The example manages common Immuta resources:
 - Identifiers (regex, column name regex and dictionary)
 - Copying reference identifiers into a domain
 - Classification frameworks (tag sensitivity and classification rules)
-- A Databricks connection (structured so Snowflake and Trino can be added)
+- Databricks, Snowflake and Redshift connections (structured so Trino can be added)
 - Data object settings and tags on the registered Harbourstone data
 - Dynamic domain assignment by tag
 - Global data and subscription policies, one YAML file each in `policies/`
@@ -67,8 +67,9 @@ The Immuta API key is supplied through:
 
     export IMMUTA_API_KEY="..."
 
-Non-secret settings you do not want to commit, such as the Databricks host and
-SQL warehouse path and the email of the user who owns connection data objects,
+Non-secret settings you do not want to commit, such as connection hosts,
+usernames, the Databricks SQL warehouse path, the Snowflake warehouse and role,
+and the email of the user who owns connection data objects,
 go in a per-environment variables file,
 `environments/<environment>.tfvars`. These files are gitignored, and the
 Makefile passes the one matching `ENVIRONMENT` with `-var-file`:
@@ -82,6 +83,40 @@ Connection secrets are supplied through Terraform variables set from
 `TF_VAR_` environment variables:
 
     export TF_VAR_databricks_token="..."   # Databricks personal access token
+    export TF_VAR_redshift_password="..."  # Redshift user's password
+
+Before applying, create the Immuta user on each platform with the connection's
+setup script (Snowflake: a user with a key pair, a role and a warehouse;
+Redshift: a user with a password).
+
+### Snowflake key pair
+
+Immuta's API does not accept a password or programmatic access token for
+Snowflake, so the Immuta user signs in with a key pair. Terraform reads the
+private key from a file; it is not an environment variable.
+
+| File | What it is | Used by |
+|---|---|---|
+| `~/.ssh/immuta_snowflake_key.p8` | Private key: unencrypted PKCS#8 RSA, 2048-bit | Terraform (`snowflake_private_key_file`, which defaults to this path) |
+| `~/.ssh/immuta_snowflake_key.pub` | Public key | Snowflake (`ALTER USER ... SET RSA_PUBLIC_KEY`) |
+
+Snowflake only supports RSA keys, so an `id_ed25519` key will not work. Create
+the pair and give Snowflake the public key:
+
+    openssl genrsa 2048 | openssl pkcs8 -topk8 -inform PEM -nocrypt -out ~/.ssh/immuta_snowflake_key.p8
+    openssl rsa -in ~/.ssh/immuta_snowflake_key.p8 -pubout -out ~/.ssh/immuta_snowflake_key.pub
+    chmod 600 ~/.ssh/immuta_snowflake_key.p8
+
+    # The public key as one line, for RSA_PUBLIC_KEY
+    grep -v -- '-----' ~/.ssh/immuta_snowflake_key.pub | tr -d '\n'
+
+Then, in Snowflake:
+
+    ALTER USER <immuta user> SET RSA_PUBLIC_KEY = '<that line>';
+
+To keep the key somewhere else, set `snowflake_private_key_file` in
+`environments/<environment>.tfvars`. The key ends up in the Terraform state, as
+all connection credentials do.
 
 Secrets must never be committed to the repository or printed by scripts.
 

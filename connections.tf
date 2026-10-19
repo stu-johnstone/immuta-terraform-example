@@ -2,11 +2,12 @@
 # TF_VAR_ environment variable, and is never written to the repository:
 #
 #   export TF_VAR_databricks_token="..."
+#   export TF_VAR_redshift_password="..."
 #
-# To add Snowflake or Trino, add a variable (for example snowflake_client_secret
-# or trino_password), an entry in local.connection_secrets and an entry in
+# To add another platform, such as Trino, add a variable (for example
+# trino_password), an entry in local.connection_secrets and an entry in
 # local.connections.
-# Non-secret settings you do not want to commit, such as the Databricks host,
+# Non-secret settings you do not want to commit, such as hosts and usernames,
 # come from environments/<environment>.tfvars, which is gitignored and passed
 # in by the Makefile (see environments/non-prod.tfvars.example).
 variable "databricks_host" {
@@ -35,6 +36,67 @@ variable "databricks_token" {
   }
 }
 
+variable "snowflake_host" {
+  description = "Snowflake account host name, for example abc12345.us-east-1.snowflakecomputing.com."
+  type        = string
+}
+
+variable "snowflake_warehouse" {
+  description = "Snowflake warehouse Immuta runs its queries on."
+  type        = string
+}
+
+variable "snowflake_role" {
+  description = "Snowflake role Immuta connects with, created by the connection setup script."
+  type        = string
+}
+
+variable "snowflake_username" {
+  description = "Snowflake user Immuta connects with; its public key must be set in Snowflake."
+  type        = string
+}
+
+variable "snowflake_private_key_file" {
+  description = "Path to the Snowflake user's unencrypted PKCS#8 RSA private key (.p8). See README.md."
+  type        = string
+  default     = "~/.ssh/immuta_snowflake_key.p8"
+
+  validation {
+    condition     = fileexists(pathexpand(var.snowflake_private_key_file))
+    error_message = "No private key at snowflake_private_key_file. Create it as described in README.md (Snowflake key pair)."
+  }
+
+  validation {
+    condition     = !endswith(var.snowflake_private_key_file, ".pub")
+    error_message = "snowflake_private_key_file must be the private key (.p8), not the public key (.pub)."
+  }
+}
+
+locals {
+  snowflake_private_key = sensitive(file(pathexpand(var.snowflake_private_key_file)))
+}
+
+variable "redshift_host" {
+  description = "Redshift cluster or workgroup endpoint host name, without the port or database."
+  type        = string
+}
+
+variable "redshift_username" {
+  description = "Redshift user Immuta connects with."
+  type        = string
+}
+
+variable "redshift_password" {
+  description = "Password of the Redshift user Immuta connects with."
+  type        = string
+  sensitive   = true
+
+  validation {
+    condition     = length(var.redshift_password) > 0
+    error_message = "Set TF_VAR_redshift_password to the Redshift user's password."
+  }
+}
+
 # The owner of the data objects each connection registers, looked up by email
 # so that no profile ID is hard-coded. Needs the USER_ADMIN permission.
 data "immuta_user" "data_owner" {
@@ -50,6 +112,8 @@ locals {
   # fields from local.connections.
   connection_secrets = {
     databricks = { token = var.databricks_token }
+    snowflake  = { privateKey = { filename = "immuta_snowflake_key.p8", content = local.snowflake_private_key } }
+    redshift   = { password = var.redshift_password }
   }
 }
 

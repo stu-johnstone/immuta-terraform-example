@@ -1,10 +1,20 @@
 # Settings for the non-prod environment. Copy to non-prod.tfvars (gitignored)
 # and set your values; the Makefile passes environments/$ENVIRONMENT.tfvars
-# with -var-file. Never put secrets here: the Databricks token comes from the
-# TF_VAR_databricks_token environment variable.
+# with -var-file. Never put secrets here: they come from the
+# TF_VAR_databricks_token and TF_VAR_redshift_password environment variables,
+# and the Snowflake private key from a file (see README.md).
 
 databricks_host = "dbc-00000000-0000.cloud.databricks.com"
 databricks_path = "/sql/1.0/warehouses/0000000000000000"
+
+snowflake_host      = "abc12345.us-east-1.snowflakecomputing.com"
+snowflake_warehouse = "IMMUTA_WH"
+snowflake_role      = "IMMUTA_SYSTEM_ROLE"
+snowflake_username  = "IMMUTA_SYSTEM_USER"
+# snowflake_private_key_file = "~/.ssh/immuta_snowflake_key.p8"  # the default
+
+redshift_host     = "my-cluster.abc123xyz.us-east-1.redshift.amazonaws.com"
+redshift_username = "immuta_system"
 
 # An existing Immuta user who owns the data objects connections register.
 data_owner_email = "data.owner@example.com"
