@@ -42,6 +42,3 @@
 
 > “The agent is not using Alice’s unrestricted credentials. It is acting on her behalf with governed access for this task.”
 
-## Closing message
-
-> “Different people need different access, and their needs change over time. Immuta uses identity, data classification, and policy to deliver the right access without broad standing permissions.”

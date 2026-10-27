@@ -299,9 +299,9 @@ locals {
     # New analytics employee. The Analytics group gives her baseline access;
     # her Region limits the rows she sees, and PII is masked.
     cassandra = {
-      user_id     = "cassandra.lee@example.com"
+      user_id     = "stu.johnstone+cassandra.lee@immuta.com"
       name        = "Cassandra Lee"
-      email       = "cassandra.lee@example.com"
+      email       = "stu.johnstone+cassandra.lee@immuta.com"
       permissions = []
 
       # Attribute name => list of values.
@@ -317,9 +317,9 @@ locals {
     # Manager. His BusinessUnit decides which business's data he sees: change
     # it to "Retail Banking" and his access moves, with no policy change.
     brian = {
-      user_id     = "brian.walsh@example.com"
+      user_id     = "stu.johnstone+brian.walsh@immuta.com"
       name        = "Brian Walsh"
-      email       = "brian.walsh@example.com"
+      email       = "stu.johnstone+brian.walsh@immuta.com"
       permissions = []
 
       attributes = {
@@ -331,9 +331,9 @@ locals {
     # CEO. The Executives group entitles her to gold (business insight)
     # tables only, with no standing access to raw data.
     alice = {
-      user_id     = "alice.morgan@example.com"
+      user_id     = "stu.johnstone+alice.morgan@immuta.com"
       name        = "Alice Morgan"
-      email       = "alice.morgan@example.com"
+      email       = "stu.johnstone+alice.morgan@immuta.com"
       permissions = []
 
       attributes = {
