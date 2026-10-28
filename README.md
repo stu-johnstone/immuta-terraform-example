@@ -168,6 +168,48 @@ it, for example `AUTO_APPROVE=true make apply`.
 
 No Terraform backend is configured; state is stored locally for simplicity.
 
+## Simulated CI/CD
+
+Make targets play the stages a pipeline would run on a pull request. The
+tickets in `tickets/` are the approved access requests: the `DEMO.md` story
+written as Jira-style requests with acceptance criteria. Add a ticket by adding
+a markdown file.
+
+| Stage | Target | Needs | Checks |
+|---|---|---|---|
+| 1 | `make ci-validate` | Nothing | `terraform fmt` and `validate` (the provider's checks of each policy document), and that every tag, group and attribute a policy names exists in `locals.tf` |
+| 2 | `make ci-plan` | Immuta credentials | The plan, saved in `.ci/` |
+| 3 | `make ci-review` | Dust credentials | A Dust agent compares the change with every ticket and returns a verdict: `pass`, `fail` or `needs_human` |
+
+The review works out which tickets the change implements and checks their
+acceptance criteria. It fails the change if it widens access beyond what any
+ticket asks, or breaks another ticket (a regression). Tickets the change does
+not touch are reported as not addressed, which is not a failure.
+
+`make ci` runs all three stages and gives the AI the plan too. Nothing is applied: a human approves, then runs `make apply`. Immuta
+itself fully validates a policy only when it is applied.
+
+The review compares your uncommitted changes with `HEAD`; set `BASE` to
+compare with another revision, for example `BASE=origin/main`. The prompt is
+`cicd/prompt.md`: edit it to tune the review. Results are saved in
+`.ci/review.json`.
+
+Set these environment variables for the review stage:
+
+    export DUST_API_KEY=...          # Dust API key; never commit it
+    export DUST_WORKSPACE_ID=...     # from the Dust workspace URL
+    export DUST_AGENT_ID=...         # sId of the agent that runs the prompt
+    # export DUST_API_URL=https://eu.dust.tt  # for an EU workspace
+
+Use an agent with no tools and no instructions of its own, so the review
+depends only on `cicd/prompt.md` and the change.
+
+For example, to play DEMO-103, uncomment Cassandra's `PII Access` attribute in
+`locals.tf` and run `make ci-review`: the review should find DEMO-103
+addressed and pass. Delete `policies/data-mask-names-dob.yaml` instead and it should
+fail, even though stage 1 passes, because everyone gains unmasked names.
+Change `Analytics` to `Analytic` in a policy and stage 1 fails.
+
 ## Project Structure
 
     .
@@ -187,4 +229,6 @@ No Terraform backend is configured; state is stored locally for simplicity.
     ├── environments/   # <environment>.tfvars settings (gitignored) and templates
     ├── users.tf        # Users and user attributes
     ├── groups.tf       # Groups, group attributes and memberships
-    └── outputs.tf      # Outputs
+    ├── outputs.tf      # Outputs
+    ├── tickets/        # DEMO.md as Jira-style tickets, for the simulated CI/CD
+    └── cicd/           # Simulated CI/CD: policy check and AI review (prompt.md)

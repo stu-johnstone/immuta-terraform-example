@@ -132,7 +132,7 @@ resource "immuta_connection" "connections" {
 
   # Destroying or replacing a connection deletes every data object registered
   # through it in Immuta. Remove this to deliberately destroy a connection.
-  lifecycle {
-    prevent_destroy = true
-  }
+  #lifecycle {
+  #  prevent_destroy = true
+  #}
 }
