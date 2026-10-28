@@ -172,29 +172,36 @@ No Terraform backend is configured; state is stored locally for simplicity.
 
 Make targets play the stages a pipeline would run on a pull request. The
 tickets in `tickets/` are the approved access requests: the `DEMO.md` story
-written as Jira-style requests with acceptance criteria. Add a ticket by adding
-a markdown file.
+written as Jira-style requests with acceptance criteria. Every ticket should
+be implemented. Add a ticket by adding a markdown file.
 
 | Stage | Target | Needs | Checks |
 |---|---|---|---|
 | 1 | `make ci-validate` | Nothing | `terraform fmt` and `validate` (the provider's checks of each policy document), and that every tag, group and attribute a policy names exists in `locals.tf` |
 | 2 | `make ci-plan` | Immuta credentials | The plan, saved in `.ci/` |
-| 3 | `make ci-review` | Dust credentials | A Dust agent compares the change with every ticket and returns a verdict: `pass`, `fail` or `needs_human` |
+| 3 | `make ci-review` | [Ollama](https://ollama.com) running locally (or Dust credentials) | An AI model checks the configuration and policies against every acceptance criterion of every ticket |
 
-The review works out which tickets the change implements and checks their
-acceptance criteria. It fails the change if it widens access beyond what any
-ticket asks, or breaks another ticket (a regression). Tickets the change does
-not touch are reported as not addressed, which is not a failure.
+The review sends the tickets, the users, groups, attributes and tags, and
+every policy to the model, which marks each acceptance criterion `met`,
+`not_met` or `unclear`. The pipeline decides the verdict from those: every
+criterion met passes, any not met fails, anything else needs a human.
 
-`make ci` runs all three stages and gives the AI the plan too. Nothing is applied: a human approves, then runs `make apply`. Immuta
-itself fully validates a policy only when it is applied.
+`make ci` runs all three stages. Nothing is applied: a human approves, then
+runs `make apply`. Immuta itself fully validates a policy only when it is
+applied.
 
-The review compares your uncommitted changes with `HEAD`; set `BASE` to
-compare with another revision, for example `BASE=origin/main`. The prompt is
-`cicd/prompt.md`: edit it to tune the review. Results are saved in
-`.ci/review.json`.
+The prompt is `cicd/prompt.md`: edit it to tune the review. Results are saved
+in `.ci/review.json`. `make ci-test` runs the pipeline's unit tests.
 
-Set these environment variables for the review stage:
+By default the review uses a local Ollama model, so it needs no credentials:
+
+    ollama pull qwen3-coder:30b      # once
+    make ci-review                   # or OLLAMA_MODEL=<model> make ci-review
+
+Set `OLLAMA_HOST` if Ollama is not on `localhost:11434`.
+
+To use a Dust agent instead, run `REVIEW_BACKEND=dust make ci-review` with
+these environment variables set:
 
     export DUST_API_KEY=...          # Dust API key; never commit it
     export DUST_WORKSPACE_ID=...     # from the Dust workspace URL
@@ -202,13 +209,14 @@ Set these environment variables for the review stage:
     # export DUST_API_URL=https://eu.dust.tt  # for an EU workspace
 
 Use an agent with no tools and no instructions of its own, so the review
-depends only on `cicd/prompt.md` and the change.
+depends only on `cicd/prompt.md` and the material.
 
-For example, to play DEMO-103, uncomment Cassandra's `PII Access` attribute in
-`locals.tf` and run `make ci-review`: the review should find DEMO-103
-addressed and pass. Delete `policies/data-mask-names-dob.yaml` instead and it should
-fail, even though stage 1 passes, because everyone gains unmasked names.
-Change `Analytics` to `Analytic` in a policy and stage 1 fails.
+To demo it, add a ticket, for example `tickets/DEMO-105.md` asking that
+Brian is a member of the Executives group, and run `make ci-review`: it fails
+because the configuration does not meet it. Make the change in `locals.tf`
+and it passes. Delete `policies/data-mask-names-dob.yaml` instead and it
+fails, even though stage 1 passes, because PII is no longer masked. Change
+`Analytics` to `Analytic` in a policy and stage 1 fails.
 
 ## Project Structure
 

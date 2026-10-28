@@ -308,14 +308,13 @@ locals {
       attributes = {
         Region = ["APAC"]
 
-        # Brian's approval of unmasked names and dates of birth. Uncomment to
-        # play that part of the demo.
-        # "PII Access" = ["Names and Dates of Birth"]
+        # Brian's approval of unmasked names and dates of birth (DEMO-103).
+        "PII Access" = ["Names and Dates of Birth"]
       }
     }
 
-    # Manager. His BusinessUnit decides which business's data he sees: change
-    # it to "Retail Banking" and his access moves, with no policy change.
+    # Manager. His BusinessUnit decides which business's data he sees: moved
+    # from Insurance to Retail Banking (DEMO-102), with no policy change.
     brian = {
       user_id     = "stu.johnstone+brian.walsh@immuta.com"
       name        = "Brian Walsh"
@@ -323,7 +322,7 @@ locals {
       permissions = []
 
       attributes = {
-        BusinessUnit = ["Insurance"]
+        BusinessUnit = ["Retail Banking"]
         Region       = ["APAC"]
       }
     }

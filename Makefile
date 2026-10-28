@@ -1,4 +1,4 @@
-.PHONY: init fmt validate workspace plan apply destroy data data-test ci ci-validate ci-plan ci-review
+.PHONY: init fmt validate workspace plan apply destroy data data-test ci ci-validate ci-plan ci-review ci-test
 
 ENVIRONMENT ?= non-prod
 
@@ -42,11 +42,12 @@ data-test:
 
 # Simulated CI/CD pipeline (see README.md). Each target is one stage that a
 # real pipeline would run on a pull request; `make ci` runs them in order.
-# TICKETS is the directory of approved tickets the change is reviewed against;
-# BASE is the git revision the change is compared with (HEAD reviews
-# uncommitted changes).
+# TICKETS is the directory of approved tickets the configuration is checked
+# against.
 TICKETS ?= tickets
-BASE ?= HEAD
+# REVIEW_BACKEND is ollama (a local model, no credentials) or dust.
+REVIEW_BACKEND ?= ollama
+OLLAMA_MODEL ?= qwen3-coder:30b
 CI_DIR = .ci
 PIPELINE = python3 cicd/pipeline.py
 
@@ -62,11 +63,14 @@ ci-plan: workspace
 	TF_LOG_PROVIDER=DEBUG TF_LOG_PATH=./tf.log terraform plan -var-file=$(VAR_FILE) -out=$(CI_DIR)/tfplan
 	terraform show -no-color $(CI_DIR)/tfplan > $(CI_DIR)/plan.txt
 
-# Stage 3, Dust credentials: AI review of the change against every ticket.
-# `make ci` includes the plan from stage 2.
+# Stage 3, a local Ollama model (or Dust credentials with REVIEW_BACKEND=dust):
+# AI check that the configuration and policies meet every ticket.
 ci-review:
-	$(PIPELINE) review --tickets $(TICKETS) --base $(BASE) $(if $(REVIEW_PLAN),--plan $(REVIEW_PLAN))
+	$(PIPELINE) review --tickets $(TICKETS) --backend $(REVIEW_BACKEND) --model $(OLLAMA_MODEL)
 
-ci: REVIEW_PLAN = $(CI_DIR)/plan.txt
+# Unit tests of the pipeline itself.
+ci-test:
+	python3 -m unittest discover -s cicd
+
 ci: ci-validate ci-plan ci-review
 	@echo "All stages passed. A human approves the change, then: make apply"

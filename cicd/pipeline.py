@@ -3,8 +3,8 @@
 
   check   Checks that every tag, group and attribute a policy names exists in
           locals.tf, and that policy keys are unique. No credentials needed.
-  review  Asks a model whether the change does what the tickets ask, and
-          nothing more. Every ticket in the tickets directory is sent. The
+  review  Asks a model whether the configuration and policies meet every
+          acceptance criterion of every ticket in the tickets directory. The
           prompt is cicd/prompt.md. The model is a local Ollama model (the
           default, no credentials) or a Dust agent (--backend dust).
 
@@ -44,6 +44,33 @@ ATTRIBUTE_FUNCTION = re.compile(r"@(?:attributeValuesContains|hasAttribute)\(\s*
 
 # Review verdicts, and the exit code each gives the stage.
 VERDICT_EXIT_CODES = {"pass": 0, "fail": 1, "needs_human": 1}
+
+# The review JSON that cicd/prompt.md asks for. Ollama is held to it.
+REVIEW_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "tickets": {"type": "array", "items": {
+            "type": "object",
+            "properties": {
+                "ticket": {"type": "string"},
+                "title": {"type": "string"},
+                "criteria": {"type": "array", "items": {
+                    "type": "object",
+                    "properties": {
+                        "criterion": {"type": "string"},
+                        "status": {"type": "string", "enum": ["met", "not_met", "unclear"]},
+                        "evidence": {"type": "string"},
+                    },
+                    "required": ["criterion", "status", "evidence"],
+                }},
+            },
+            "required": ["ticket", "title", "criteria"],
+        }},
+        "concerns": {"type": "array", "items": {"type": "string"}},
+        "summary": {"type": "string"},
+    },
+    "required": ["tickets", "concerns", "summary"],
+}
 
 
 def fail(message, code=2):
@@ -143,56 +170,32 @@ def check(_args):
     print(f"Policy check passed: {count} policies, {len(warnings)} warning(s).")
 
 
-def git(*args):
-    result = subprocess.run(["git", *args], capture_output=True, text=True, cwd=ROOT)
-    if result.returncode != 0:
-        fail(f"git {' '.join(args)} failed:\n{result.stderr.strip()}")
-    return result.stdout
-
-
-def change_diff(base):
-    """The change under review: Terraform files and policies against base,
-    including uncommitted and new (untracked) files."""
-    paths = ["policies", "*.tf"]
-    diff = git("diff", "--no-color", base, "--", *paths)
-
-    for path in git("ls-files", "--others", "--exclude-standard", "--", *paths).split():
-        content = (ROOT / path).read_text()
-        diff += f"\nNew file {path}:\n{content}"
-
-    return diff.strip()
-
-
 def section(title, body, language=""):
     return f"## {title}\n\nBEGIN {title.upper()}\n```{language}\n{body.strip()}\n```\nEND {title.upper()}\n"
 
 
 def load_tickets(directory):
-    """Every ticket in the directory, as one markdown document."""
+    """Every ticket in the directory, as one markdown document, and the ticket
+    IDs (the file names, for example DEMO-101)."""
     paths = sorted(Path(directory).glob("*.md"))
     if not paths:
         fail(f"no tickets (*.md) in {directory}")
-    return "\n\n---\n\n".join(path.read_text().strip() for path in paths), len(paths)
+    return "\n\n---\n\n".join(path.read_text().strip() for path in paths), [path.stem for path in paths]
 
 
-def build_message(tickets, diff, context, plan):
+def build_message(tickets, context):
     policies = "\n\n".join(
         f"# {path}\n{(ROOT / path).read_text().strip()}" for path in sorted(context["policies"])
     )
     configuration = {key: context[key] for key in ("users", "groups", "tags")}
 
-    parts = [
+    return "\n".join([
         PROMPT.read_text(),
         "# Material\n",
         section("Tickets", tickets, "markdown"),
-        section("Diff", diff, "diff"),
         section("Configuration", json.dumps(configuration, indent=2), "json"),
         section("Policies", policies, "yaml"),
-    ]
-    if plan is not None:
-        parts.append(section("Plan", plan))
-
-    return "\n".join(parts)
+    ])
 
 
 class Dust:
@@ -278,6 +281,8 @@ class Ollama:
                 # The default context is too small for the material: Ollama
                 # would silently drop the start of the prompt.
                 "options": {"num_ctx": self.context_tokens, "temperature": 0},
+                # Constrains the reply to valid review JSON.
+                "format": REVIEW_SCHEMA,
             }).encode(),
             headers={"Content-Type": "application/json"},
         )
@@ -309,61 +314,68 @@ def latest_agent_message(conversation):
 
 
 def parse_review(reply):
-    """Reads the JSON object from the agent's reply."""
+    """Reads the JSON object from the model's reply."""
     match = re.search(r"```(?:json)?\s*(\{.*\})\s*```", reply, re.DOTALL)
     text = match.group(1) if match else reply
     try:
         review = json.loads(text)
     except json.JSONDecodeError:
         return None
-    return review if review.get("verdict") in VERDICT_EXIT_CODES else None
+    return review if isinstance(review, dict) and isinstance(review.get("tickets"), list) else None
+
+
+def decide(review, ticket_ids):
+    """Sets the verdict from the criteria, so the model does not choose it:
+    pass if every criterion of every ticket is met, fail if any is not met,
+    needs_human otherwise (a criterion is unclear or a ticket has no result)."""
+    checks = []
+    reported = {ticket.get("ticket") for ticket in review["tickets"]}
+    missing = [ticket for ticket in ticket_ids if ticket not in reported]
+    if missing:
+        checks.append(f"no result for {', '.join(missing)}")
+    for ticket in review["tickets"]:
+        if not ticket.get("criteria"):
+            checks.append(f"{ticket.get('ticket')}: no criteria checked")
+
+    statuses = [c.get("status") for ticket in review["tickets"] for c in ticket.get("criteria", [])]
+    if "not_met" in statuses:
+        verdict = "fail"
+    elif checks or any(status != "met" for status in statuses):
+        verdict = "needs_human"
+    else:
+        verdict = "pass"
+
+    review["verdict"], review["checks"] = verdict, checks
+    return review
 
 
 def print_review(review):
     marks = {"met": "PASS", "not_met": "FAIL", "unclear": "????"}
 
     print("\nAI review\n")
-    for ticket in review.get("tickets", []):
-        state = "addressed" if ticket.get("addressed") else "not addressed"
-        print(f"  {ticket.get('ticket')}: {ticket.get('title', '')} ({state})")
+    for ticket in review["tickets"]:
+        print(f"  {ticket.get('ticket')}: {ticket.get('title', '')}")
         for criterion in ticket.get("criteria", []):
             print(f"    [{marks.get(criterion.get('status'), '????')}] {criterion.get('criterion')}")
             print(f"           {criterion.get('evidence')}")
-    for regression in review.get("regressions", []):
-        print(f"  [REGRESSION] {regression.get('ticket')}: {regression.get('criterion')}: {regression.get('explanation')}")
-    for change in review.get("unrequested_changes", []):
-        flag = "WIDENS ACCESS" if change.get("widens_access") else "unrequested"
-        print(f"  [{flag}] {change.get('change')}: {change.get('explanation')}")
     for concern in review.get("concerns", []):
         print(f"  [concern] {concern}")
-    print(f"\n  Risk: {review.get('risk')}   Verdict: {review['verdict'].upper()}")
+    for check in review["checks"]:
+        print(f"  [pipeline] {check}")
+    print(f"\n  Verdict: {review['verdict'].upper()}")
     print(f"  {review.get('summary', '')}\n")
 
 
 def review(args):
     model = reviewer(args)
-    tickets, ticket_count = load_tickets(args.tickets)
+    tickets, ticket_ids = load_tickets(args.tickets)
 
     # Clear the last review, so a failed run never leaves an old verdict.
     for name in ("review.md", "review.json"):
         (OUTPUT_DIR / name).unlink(missing_ok=True)
 
-    diff = change_diff(args.base)
-    if not diff:
-        print(f"No change to policies or Terraform files against {args.base}: nothing to review.")
-        return
-
-    plan = None
-    if args.plan:
-        plan_path = Path(args.plan)
-        if not plan_path.is_file():
-            fail(f"plan {args.plan} not found; run make ci-plan")
-        plan = plan_path.read_text()
-        if len(plan) > args.max_plan_chars:
-            plan = plan[:args.max_plan_chars] + "\n... (plan truncated)"
-
-    message = build_message(tickets, diff, load_context(), plan)
-    print(f"Reviewing the change against {ticket_count} tickets in {args.tickets}.")
+    message = build_message(tickets, load_context())
+    print(f"Reviewing the configuration against {len(ticket_ids)} tickets in {args.tickets}.")
     reply = model.ask("Immuta policy review", message)
 
     OUTPUT_DIR.mkdir(exist_ok=True)
@@ -372,8 +384,9 @@ def review(args):
     result = parse_review(reply)
     if result is None:
         print(reply)
-        fail("the agent's reply has no valid review JSON (saved in .ci/review.md)", 1)
+        fail("the model's reply has no valid review JSON (saved in .ci/review.md)", 1)
 
+    result = decide(result, ticket_ids)
     (OUTPUT_DIR / "review.json").write_text(json.dumps(result, indent=2) + "\n")
     print_review(result)
     sys.exit(VERDICT_EXIT_CODES[result["verdict"]])
@@ -385,11 +398,8 @@ def main():
 
     commands.add_parser("check", help="check policy references").set_defaults(run=check)
 
-    review_parser = commands.add_parser("review", help="AI review of the change against the tickets")
+    review_parser = commands.add_parser("review", help="AI review of the configuration against the tickets")
     review_parser.add_argument("--tickets", default=str(ROOT / "tickets"), help="directory of ticket markdown files")
-    review_parser.add_argument("--base", default="HEAD", help="git revision the change is compared with")
-    review_parser.add_argument("--plan", help="terraform show output to include")
-    review_parser.add_argument("--max-plan-chars", type=int, default=40000)
     review_parser.add_argument("--backend", choices=["ollama", "dust"], default="ollama",
                                help="local Ollama model (no credentials) or a Dust agent")
     review_parser.add_argument("--model", default="qwen3-coder:30b", help="Ollama model")
