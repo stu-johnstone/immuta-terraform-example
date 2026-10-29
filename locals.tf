@@ -37,21 +37,21 @@ locals {
 
       # Keys from local.identifiers. Immuta copies each reference identifier
       # into the domain; the original is left untouched.
-      reference_identifiers = ["financial_account"]
+      reference_identifiers = ["name", "date_of_birth", "contact_details", "government_id", "financial_account", "region"]
     }
 
     commercial_banking = {
       name                  = "Commercial Banking"
       description           = "Harbourstone commercial lending: business customers, facilities, covenants and credit reviews"
       assignment_tags       = ["bu_commercial_banking"]
-      reference_identifiers = []
+      reference_identifiers = ["name", "date_of_birth", "contact_details", "government_id", "financial_account", "region"]
     }
 
     insurance = {
       name                  = "Insurance"
       description           = "Harbourstone general insurance: policyholders, policies, claims and fraud flags"
       assignment_tags       = ["bu_insurance"]
-      reference_identifiers = []
+      reference_identifiers = ["name", "date_of_birth", "contact_details", "government_id", "financial_account", "region"]
     }
   }
 

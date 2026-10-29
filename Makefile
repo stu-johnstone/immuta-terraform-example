@@ -26,7 +26,7 @@ plan: workspace
 	TF_LOG_PROVIDER=DEBUG TF_LOG_PATH=./tf.log terraform plan -var-file=$(VAR_FILE)
 
 apply: workspace
-	TF_LOG_PROVIDER=DEBUG TF_LOG_PATH=./tf.log terraform apply -var-file=$(VAR_FILE) $(APPROVE_FLAG) -refresh-only
+	TF_LOG_PROVIDER=DEBUG TF_LOG_PATH=./tf.log terraform apply -var-file=$(VAR_FILE) $(APPROVE_FLAG)
 
 destroy: workspace
 	terraform destroy -var-file=$(VAR_FILE) $(APPROVE_FLAG)
