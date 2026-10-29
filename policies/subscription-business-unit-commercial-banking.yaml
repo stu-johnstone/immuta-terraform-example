@@ -16,7 +16,10 @@ actions:
   description: Commercial Banking users get Commercial Banking curated tables, limited to their region.
 circumstanceOperator: all
 circumstances:
-  - type: tags
-    tag: Business Unit.Commercial Banking
+  # Scoped to the Commercial Banking domain, which holds the data sources tagged
+  # "Business Unit.Commercial Banking" (see domains.tf). The other policies are global.
+  - type: domains
+    domains:
+      - name: Commercial Banking
   - type: columnTags
     columnTag: Data.Region

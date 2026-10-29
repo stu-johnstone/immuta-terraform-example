@@ -16,7 +16,10 @@ actions:
   description: Insurance users get Insurance curated tables, limited to their region.
 circumstanceOperator: all
 circumstances:
-  - type: tags
-    tag: Business Unit.Insurance
+  # Scoped to the Insurance domain, which holds the data sources tagged
+  # "Business Unit.Insurance" (see domains.tf). The other policies are global.
+  - type: domains
+    domains:
+      - name: Insurance
   - type: columnTags
     columnTag: Data.Region

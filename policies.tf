@@ -6,10 +6,11 @@ resource "immuta_global_policy" "policies" {
 
   policy = file("${path.module}/policies/${each.value}")
 
-  # The policies refer to tags, groups and attributes by name, so create those
-  # first.
+  # The policies refer to tags, groups, attributes and domains by name, so
+  # create those first.
   depends_on = [
     immuta_tag.tags,
     immuta_group.groups,
+    immuta_domain.domains,
   ]
 }

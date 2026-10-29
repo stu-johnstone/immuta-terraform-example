@@ -16,7 +16,10 @@ actions:
   description: Retail Banking users get Retail Banking curated tables, limited to their region.
 circumstanceOperator: all
 circumstances:
-  - type: tags
-    tag: Business Unit.Retail Banking
+  # Scoped to the Retail Banking domain, which holds the data sources tagged
+  # "Business Unit.Retail Banking" (see domains.tf). The other policies are global.
+  - type: domains
+    domains:
+      - name: Retail Banking
   - type: columnTags
     columnTag: Data.Region

@@ -23,7 +23,9 @@ The example manages common Immuta resources:
 - Databricks, Snowflake and Redshift connections (structured so Trino can be added)
 - Data object settings and tags on the registered Harbourstone data
 - Dynamic domain assignment by tag
-- Global data and subscription policies, one YAML file each in `policies/`
+- Data and subscription policies, one YAML file each in `policies/`; the
+  business unit subscription policies are scoped to their domain, the rest are
+  global
 
 The users, groups, tags and policies implement the demo in `DEMO.md`, using
 the Harbourstone Financial data in `data/` (see `data/README.md`):
