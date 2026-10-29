@@ -24,4 +24,8 @@ data_owner_email = "data.owner@example.com"
 
 # Databricks catalog the Harbourstone Financial demo data was loaded into
 # (see data/README.md). Defaults to "harbourstone".
-# harbourstone_catalog = "harbourstone"
+# databricks_catalog = "harbourstone"
+
+# Snowflake database the Vitalis Health and Forgeline Industries demo data was
+# loaded into (see data/README.md). Case-sensitive. Defaults to "OPERATIONAL".
+# snowflake_database = "OPERATIONAL"

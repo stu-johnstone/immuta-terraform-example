@@ -7,7 +7,7 @@
 
 locals {
   # Harbourstone's businesses: one Databricks schema each (in
-  # var.harbourstone_catalog). Each schema is tagged with `tag` (a key from
+  # var.databricks_catalog). Each schema is tagged with `tag` (a key from
   # local.tags), which business unit subscription policies and domains match
   # on, and each gold table is tagged "Data Layer.Gold" for executive insights.
   business_units = {

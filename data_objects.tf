@@ -2,7 +2,7 @@
 # connection registers. Load data/harbourstone_financial/databricks first (see
 # data/README.md); the data objects are looked up by path, and a lookup waits
 # up to 10 minutes for a data object the connection has not registered yet.
-variable "harbourstone_catalog" {
+variable "databricks_catalog" {
   description = "Databricks catalog the Harbourstone Financial data was loaded into."
   type        = string
   default     = "harbourstone"
@@ -15,7 +15,7 @@ locals {
   harbourstone_data_object_tags = merge(
     {
       for schema, unit in local.business_units : schema => {
-        path = [var.harbourstone_catalog, schema]
+        path = [var.databricks_catalog, schema]
         tag  = unit.tag
       }
     },
@@ -25,7 +25,7 @@ locals {
           for name in unit.gold_tables : { schema = schema, name = name }
         ]
         ]) : "${table.schema}.${table.name}" => {
-        path = [var.harbourstone_catalog, table.schema, table.name]
+        path = [var.databricks_catalog, table.schema, table.name]
         tag  = "gold"
       }
     },
@@ -37,7 +37,7 @@ locals {
 # Harbourstone catalog; its schemas and tables inherit the setting.
 resource "immuta_data_object_settings" "harbourstone" {
   connection_key = immuta_connection.connections["databricks"].connection_key
-  path           = [var.harbourstone_catalog]
+  path           = [var.databricks_catalog]
   sync_policy    = true
 }
 
@@ -56,4 +56,19 @@ resource "immuta_data_object_tag" "harbourstone" {
   connection_key = data.immuta_data_object.harbourstone[each.key].connection_key
   data_object_id = data.immuta_data_object.harbourstone[each.key].id
   tag_id         = immuta_tag.tags[each.value.tag].id
+}
+
+# Snowflake: turn data policies on for the database the Vitalis Health and
+# Forgeline Industries data was loaded into (see data/README.md); its schemas
+# and tables inherit the setting.
+variable "snowflake_database" {
+  description = "Snowflake database the Vitalis Health and Forgeline Industries data was loaded into. Case-sensitive, usually upper case."
+  type        = string
+  default     = "OPERATIONAL"
+}
+
+resource "immuta_data_object_settings" "snowflake_operational" {
+  connection_key = immuta_connection.connections["snowflake"].connection_key
+  path           = [var.snowflake_database]
+  sync_policy    = true
 }

@@ -108,7 +108,7 @@ Makefile passes the one matching `ENVIRONMENT` with `-var-file`:
 
     cp environments/non-prod.tfvars.example environments/non-prod.tfvars
 
-Set `harbourstone_catalog` there if the demo data is not in the
+Set `databricks_catalog` there if the demo data is not in the
 `harbourstone` catalog.
 
 Connection secrets are supplied through Terraform variables set from
