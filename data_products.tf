@@ -34,6 +34,14 @@ data "immuta_domain_data_sources" "data_products" {
   for_each = local.managed_data_products
 
   domain_id = immuta_domain.domains[each.value.domain].id
+
+  # Data sources join a domain through their business unit tag, so read the
+  # domain once the tags and assignments exist.
+  depends_on = [
+    immuta_domain_dynamic_assignment.assignments,
+    immuta_data_object_tag.harbourstone,
+    immuta_data_object_tag.vitalis,
+  ]
 }
 
 resource "immuta_data_product" "data_products" {

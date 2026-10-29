@@ -30,7 +30,7 @@ resource "immuta_domain_identifier" "identifiers" {
 }
 
 # Every data source with one of the domain's tags is in the domain. The
-# business unit tags are applied to the Harbourstone schemas in
+# business unit tags are applied to the Harbourstone and Vitalis schemas in
 # data_objects.tf.
 resource "immuta_domain_dynamic_assignment" "assignments" {
   for_each = { for key, domain in local.domains : key => domain if length(domain.assignment_tags) > 0 }

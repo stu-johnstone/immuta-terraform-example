@@ -1,0 +1,25 @@
+# Vitalis: users whose BusinessUnit attribute is Hospitals get that business's
+# curated (silver and gold) tables: patients and admissions. When the attribute
+# changes, access changes with it; the policy does not.
+name: Hospitals business unit access
+policyKey: subscription business unit hospitals
+type: subscription
+actions:
+  type: entitlements
+  entitlements:
+    operator: any
+    attributes:
+      - name: BusinessUnit
+        value: Hospitals
+  automaticSubscription: true
+  allowDiscovery: false
+  description: Hospitals users get Hospitals curated tables, limited to their region.
+circumstanceOperator: all
+circumstances:
+  # Scoped to the Hospitals domain, which holds the data sources tagged
+  # "Business Unit.Hospitals" (see domains.tf).
+  - type: domains
+    domains:
+      - name: Hospitals
+  - type: columnTags
+    columnTag: Data.Region

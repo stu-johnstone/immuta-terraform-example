@@ -1,0 +1,25 @@
+# Vitalis: users whose BusinessUnit attribute is Health Insurance get that business's
+# curated (silver and gold) tables: members, policies and claims. When the attribute
+# changes, access changes with it; the policy does not.
+name: Health Insurance business unit access
+policyKey: subscription business unit health insurance
+type: subscription
+actions:
+  type: entitlements
+  entitlements:
+    operator: any
+    attributes:
+      - name: BusinessUnit
+        value: Health Insurance
+  automaticSubscription: true
+  allowDiscovery: false
+  description: Health Insurance users get Health Insurance curated tables, limited to their region.
+circumstanceOperator: all
+circumstances:
+  # Scoped to the Health Insurance domain, which holds the data sources tagged
+  # "Business Unit.Health Insurance" (see domains.tf).
+  - type: domains
+    domains:
+      - name: Health Insurance
+  - type: columnTags
+    columnTag: Data.Region

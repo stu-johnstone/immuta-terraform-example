@@ -72,3 +72,45 @@ resource "immuta_data_object_settings" "snowflake_operational" {
   path           = [var.snowflake_database]
   sync_policy    = true
 }
+
+locals {
+  # Vitalis Health schemas, keyed by business unit (e.g. "dental"), and gold
+  # tables, keyed "<business unit>.<table>" (e.g. "dental.GOLD_CLINIC_DAILY"),
+  # with the tag (a key from local.tags) each one gets. Load
+  # data/vitalis_health/snowflake first (see data/README.md).
+  vitalis_data_object_tags = merge(
+    {
+      for key, unit in local.vitalis_business_units : key => {
+        path = [var.snowflake_database, unit.schema]
+        tag  = unit.tag
+      }
+    },
+    {
+      for table in flatten([
+        for key, unit in local.vitalis_business_units : [
+          for name in unit.gold_tables : { key = key, schema = unit.schema, name = name }
+        ]
+        ]) : "${table.key}.${table.name}" => {
+        path = [var.snowflake_database, table.schema, table.name]
+        tag  = "gold"
+      }
+    },
+  )
+}
+
+data "immuta_data_object" "vitalis" {
+  for_each = local.vitalis_data_object_tags
+
+  connection_key = immuta_connection.connections["snowflake"].connection_key
+  path           = each.value.path
+}
+
+# As for Harbourstone: schema tags are inherited by their tables, and assign
+# them to the Vitalis domains.
+resource "immuta_data_object_tag" "vitalis" {
+  for_each = local.vitalis_data_object_tags
+
+  connection_key = data.immuta_data_object.vitalis[each.key].connection_key
+  data_object_id = data.immuta_data_object.vitalis[each.key].id
+  tag_id         = immuta_tag.tags[each.value.tag].id
+}

@@ -1,5 +1,6 @@
 # Example data for the demo in DEMO.md, using the Harbourstone Financial Group
-# data in data/harbourstone_financial. Add or change entries here; the
+# data in data/harbourstone_financial and the Vitalis Health data in
+# data/vitalis_health. Add or change entries here; the
 # resources in the other .tf files create one Immuta object per entry.
 #
 # Map keys (for example `cassandra` or `analytics`) are stable Terraform
@@ -24,6 +25,29 @@ locals {
     insurance = {
       tag         = "bu_insurance"
       gold_tables = ["gold_loss_ratio", "gold_claims_overview", "gold_catastrophe_exposure"]
+    }
+  }
+
+  # Vitalis Health's businesses: one Snowflake schema each (in
+  # var.snowflake_database), tagged the same way, each in its own domain.
+  # Snowflake names are upper case. The same users as Harbourstone use it.
+  vitalis_business_units = {
+    health_insurance = {
+      schema      = "HEALTH_INSURANCE"
+      tag         = "bu_health_insurance"
+      gold_tables = ["GOLD_CLAIMS_MONTHLY", "GOLD_COVER_MIX", "GOLD_MEMBER_360"]
+    }
+
+    hospitals = {
+      schema      = "HOSPITALS"
+      tag         = "bu_hospitals"
+      gold_tables = ["GOLD_DAILY_ADMISSIONS", "GOLD_HOSPITAL_CENSUS", "GOLD_LENGTH_OF_STAY", "GOLD_PATIENT_JOURNEY"]
+    }
+
+    dental = {
+      schema      = "DENTAL"
+      tag         = "bu_dental"
+      gold_tables = ["GOLD_CLINIC_DAILY", "GOLD_PATIENT_RECALL", "GOLD_TREATMENT_MIX"]
     }
   }
 
@@ -52,6 +76,28 @@ locals {
       description           = "Harbourstone general insurance: policyholders, policies, claims and fraud flags"
       assignment_tags       = ["bu_insurance"]
       reference_identifiers = ["name", "date_of_birth", "contact_details", "government_id", "financial_account", "region"]
+    }
+
+    # Vitalis Health, with the health identifiers as well.
+    health_insurance = {
+      name                  = "Health Insurance"
+      description           = "Vitalis private health insurance: members, policies, claims, providers and interactions"
+      assignment_tags       = ["bu_health_insurance"]
+      reference_identifiers = ["name", "date_of_birth", "contact_details", "government_id", "financial_account", "region", "health_identifier", "diagnosis", "clinical_notes"]
+    }
+
+    hospitals = {
+      name                  = "Hospitals"
+      description           = "Vitalis private hospitals: patients, admissions, clinical notes and medication orders"
+      assignment_tags       = ["bu_hospitals"]
+      reference_identifiers = ["name", "date_of_birth", "contact_details", "government_id", "financial_account", "region", "health_identifier", "diagnosis", "clinical_notes"]
+    }
+
+    dental = {
+      name                  = "Dental"
+      description           = "Vitalis dental clinics: patients, appointments, treatments and dental notes"
+      assignment_tags       = ["bu_dental"]
+      reference_identifiers = ["name", "date_of_birth", "contact_details", "government_id", "financial_account", "region", "health_identifier", "diagnosis", "clinical_notes"]
     }
   }
 
@@ -93,6 +139,33 @@ locals {
       subject_matter_expert = "stu.johnstone@immuta.com"
       request_form          = "Standard Request Form"
     }
+
+    health_insurance_insights = {
+      name                  = "Health Insurance Insights"
+      description           = "Gold (business insight) tables for Vitalis Health Insurance."
+      domain                = "health_insurance"
+      tables                = local.vitalis_business_units.health_insurance.gold_tables
+      subject_matter_expert = "stu.johnstone@immuta.com"
+      request_form          = "Standard Request Form"
+    }
+
+    hospitals_insights = {
+      name                  = "Hospitals Insights"
+      description           = "Gold (business insight) tables for Vitalis Hospitals."
+      domain                = "hospitals"
+      tables                = local.vitalis_business_units.hospitals.gold_tables
+      subject_matter_expert = "stu.johnstone@immuta.com"
+      request_form          = "Standard Request Form"
+    }
+
+    dental_insights = {
+      name                  = "Dental Insights"
+      description           = "Gold (business insight) tables for Vitalis Dental."
+      domain                = "dental"
+      tables                = local.vitalis_business_units.dental.gold_tables
+      subject_matter_expert = "stu.johnstone@immuta.com"
+      request_form          = "Standard Request Form"
+    }
   }
 
   # Key => fully qualified tag name. Tags are hierarchical, and Immuta creates
@@ -106,11 +179,17 @@ locals {
     pii_government_id     = "PII.Government ID"
     pii_financial_account = "PII.Financial Account"
     region                = "Data.Region"
+    phi_health_identifier = "PHI.Health Identifier"
+    phi_diagnosis         = "PHI.Diagnosis"
+    phi_clinical_notes    = "PHI.Clinical Notes"
 
     # Applied to schemas and tables in data_objects.tf.
     bu_retail_banking     = "Business Unit.Retail Banking"
     bu_commercial_banking = "Business Unit.Commercial Banking"
     bu_insurance          = "Business Unit.Insurance"
+    bu_health_insurance   = "Business Unit.Health Insurance"
+    bu_hospitals          = "Business Unit.Hospitals"
+    bu_dental             = "Business Unit.Dental"
     gold                  = "Data Layer.Gold"
 
     # Used by the HR framework.
@@ -149,7 +228,9 @@ locals {
   }
 
   # Identifiers apply tags (keys from local.tags) to matching columns. These
-  # match the Harbourstone column names, in bronze, silver and gold.
+  # match the Harbourstone and Vitalis column names, in bronze, silver and
+  # gold. Write column name regexes in lower case: identifiers.tf also
+  # matches the upper-case names Snowflake uses.
   # `domain = null` makes a tenant-wide reference identifier; set it to a key
   # from local.domains to create the identifier inside that domain.
   identifiers = {
@@ -159,7 +240,7 @@ locals {
       name        = "Person name columns"
       description = "Columns that hold a person's name"
       type        = "columnNameRegex"
-      regex       = "^(first_name|last_name|full_name|cardholder_name|payee_name)$"
+      regex       = "^(first_name|last_name|full_name|cardholder_name|payee_name|guardian_name|next_of_kin_name)$"
       tags        = ["pii_name"]
       domain      = null
     }
@@ -177,14 +258,14 @@ locals {
       name        = "Contact detail columns"
       description = "Columns that hold an email address, phone number or street address"
       type        = "columnNameRegex"
-      regex       = "^(email|phone|mobile_phone|address_line)$"
+      regex       = "^(email|phone|mobile_phone|address_line|next_of_kin_phone)$"
       tags        = ["pii_contact_details"]
       domain      = null
     }
 
     government_id = {
       name        = "Government ID columns"
-      description = "Columns that hold a tax file number, passport, driver licence or Medicare number"
+      description = "Columns that hold a tax file number, passport or driver licence"
       type        = "columnNameRegex"
       regex       = "^(tax_file_number|document_number|drivers_licence_number)$"
       tags        = ["pii_government_id"]
@@ -195,7 +276,7 @@ locals {
       name        = "Financial account columns"
       description = "Columns that hold a card number, BSB, account number or IBAN"
       type        = "columnNameRegex"
-      regex       = "^(card_number|bsb|account_number|iban|payee_bsb|payee_account_number)$"
+      regex       = "^(card_number|bsb|account_number|iban|payee_bsb|payee_account_number|debit_bsb|debit_account_number)$"
       tags        = ["pii_financial_account"]
       domain      = null
     }
@@ -208,6 +289,34 @@ locals {
       type        = "columnNameRegex"
       regex       = "^region$"
       tags        = ["region"]
+      domain      = null
+    }
+
+    # Vitalis health data (see policies/data-mask-health.yaml).
+    health_identifier = {
+      name        = "Health identifier columns"
+      description = "Columns that hold a Medicare number, IHI or NHI number"
+      type        = "columnNameRegex"
+      regex       = "^(medicare_number|health_identifier)$"
+      tags        = ["phi_health_identifier"]
+      domain      = null
+    }
+
+    diagnosis = {
+      name        = "Diagnosis columns"
+      description = "Columns that hold a diagnosis code or description"
+      type        = "columnNameRegex"
+      regex       = "^(diagnosis_code|primary_diagnosis_code|diagnosis_description)$"
+      tags        = ["phi_diagnosis"]
+      domain      = null
+    }
+
+    clinical_notes = {
+      name        = "Clinical note columns"
+      description = "Free-text clinical and contact notes, which can contain phone and Medicare numbers"
+      type        = "columnNameRegex"
+      regex       = "^(notes|note_text|latest_note|last_contact_note)$"
+      tags        = ["phi_clinical_notes"]
       domain      = null
     }
 
@@ -406,6 +515,16 @@ locals {
       attributes = {
         Department = "Executive"
       }
+    }
+
+    # Vitalis treating clinicians: see diagnoses and unredacted clinical notes
+    # (policies/data-mask-health.yaml). Add members as needed.
+    clinicians = {
+      name        = "Clinicians"
+      description = "Vitalis treating clinicians"
+      email       = "clinicians@example.com"
+      members     = []
+      attributes  = {}
     }
 
     # Exempt from the region row filter (policies/data-row-region.yaml), so

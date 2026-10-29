@@ -1,0 +1,52 @@
+# Vitalis health data (see data/vitalis_health/README.md):
+# - Medicare numbers and health identifiers are hashed for everyone, so
+#   records can still be linked without exposing them.
+# - Diagnoses are hidden (null) and phone and Medicare numbers in free-text
+#   notes are redacted, except for treating clinicians (the Clinicians group).
+name: Mask health data
+policyKey: data mask health
+type: data
+actions:
+  - rules:
+      - type: Masking
+        config:
+          fields:
+            - type: columnTags
+              columnTag: PHI.Health Identifier
+          maskingConfig:
+            type: Hash
+      - type: Masking
+        exceptions:
+          operator: any
+          groups:
+            - Clinicians
+        config:
+          fields:
+            - type: columnTags
+              columnTag: PHI.Diagnosis
+          maskingConfig:
+            type: "Null"
+      - type: Masking
+        exceptions:
+          operator: any
+          groups:
+            - Clinicians
+        config:
+          fields:
+            - type: columnTags
+              columnTag: PHI.Clinical Notes
+          maskingConfig:
+            # Runs of 9 to 16 digits and spaces, optionally starting with +,
+            # e.g. "0491 570 298", "+64 21 555 0424" or "2123 45670 1".
+            type: Regular Expression
+            regex: '\+?[0-9][0-9 ]{7,14}[0-9]'
+            replacement: REDACTED
+            global: true
+circumstanceOperator: any
+circumstances:
+  - type: columnTags
+    columnTag: PHI.Health Identifier
+  - type: columnTags
+    columnTag: PHI.Diagnosis
+  - type: columnTags
+    columnTag: PHI.Clinical Notes

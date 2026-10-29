@@ -21,11 +21,10 @@ The example manages common Immuta resources:
 - Copying reference identifiers into a domain
 - Classification frameworks (tag sensitivity and classification rules)
 - Databricks, Snowflake and Redshift connections (structured so Trino can be added)
-- Data object settings and tags on the registered Harbourstone data
+- Data object settings and tags on the registered Harbourstone and Vitalis data
 - Dynamic domain assignment by tag
 - Data and subscription policies, one YAML file each in `policies/`; the
-  business unit subscription policies are scoped to their domain, the rest are
-  global
+  subscription policies are scoped to domains, the data policies are global
 
 The users, groups, tags and policies implement the demo in `DEMO.md`, using
 the Harbourstone Financial data in `data/` (see `data/README.md`):
@@ -41,8 +40,16 @@ the Harbourstone Financial data in `data/` (see `data/README.md`):
 - **Data Stewards** (an existing SSO user, added by email in `locals.tf`) are
   exempt from the region row filter and see every row. PII is still masked.
 
-Load the Databricks data before applying: the Harbourstone schemas and
-gold tables are looked up in the connection to tag them.
+The Vitalis Health data (Snowflake) is in its own Health Insurance, Hospitals
+and Dental domains, and the same people use it: Cassandra gets the curated
+tables for her region, Alice the gold tables, and users with the matching
+`BusinessUnit` (Brian, if he moves to Hospitals) each business's curated
+tables. Medicare numbers are hashed, and diagnoses and numbers in
+clinical notes are hidden except from the Clinicians group
+(`policies/data-mask-health.yaml`).
+
+Load the Databricks and Snowflake data before applying: the Harbourstone and
+Vitalis schemas and gold tables are looked up in the connections to tag them.
 
 The configuration is deliberately data-driven. Example domains, users, groups,
 tags, identifiers, frameworks and connections are defined in `locals.tf`; each user and group lists its own attributes, and
@@ -240,7 +247,7 @@ fails, even though stage 1 passes, because PII is no longer masked. Change
     ├── identifiers.tf  # Tags and identifiers
     ├── frameworks.tf   # Classification frameworks
     ├── connections.tf  # Data platform connections and their variables
-    ├── data_objects.tf # Settings and tags on the Harbourstone data objects
+    ├── data_objects.tf # Settings and tags on the Harbourstone and Vitalis data objects
     ├── policies.tf     # Global policies, one per file in policies/
     ├── policies/       # Global policies in the Immuta V2 policy format (YAML)
     ├── environments/   # <environment>.tfvars settings (gitignored) and templates

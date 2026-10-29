@@ -18,7 +18,15 @@ resource "immuta_identifier" "identifiers" {
 
   # Type-specific settings: `regex` for regex and columnNameRegex, `values` and
   # `case_sensitive` for dictionary. Unused settings are left unset.
-  regex          = try(each.value.regex, null)
+  #
+  # Column name regexes are written in lower case (Databricks) and matched in
+  # upper case too (Snowflake), e.g. "^region$|^REGION$". They must not use
+  # escapes such as \d, which upper() would change.
+  regex = (
+    each.value.type == "columnNameRegex"
+    ? "${each.value.regex}|${upper(each.value.regex)}"
+    : try(each.value.regex, null)
+  )
   values         = try(each.value.values, null)
   case_sensitive = try(each.value.case_sensitive, null)
 }

@@ -1,0 +1,25 @@
+# Vitalis: users whose BusinessUnit attribute is Dental get that business's
+# curated (silver and gold) tables: patients, appointments and treatments. When the attribute
+# changes, access changes with it; the policy does not.
+name: Dental business unit access
+policyKey: subscription business unit dental
+type: subscription
+actions:
+  type: entitlements
+  entitlements:
+    operator: any
+    attributes:
+      - name: BusinessUnit
+        value: Dental
+  automaticSubscription: true
+  allowDiscovery: false
+  description: Dental users get Dental curated tables, limited to their region.
+circumstanceOperator: all
+circumstances:
+  # Scoped to the Dental domain, which holds the data sources tagged
+  # "Business Unit.Dental" (see domains.tf).
+  - type: domains
+    domains:
+      - name: Dental
+  - type: columnTags
+    columnTag: Data.Region
