@@ -1,13 +1,7 @@
--- Who am I? Run first, as each persona.
---
--- For a service principal, current_user() returns its application ID (a
--- UUID), not a name. Databricks SQL has no function that returns a service
--- principal's display name, so map the IDs here. Copy each application ID
--- from the workspace admin settings (Identity and access > Service
--- principals).
 
 USE CATALOG stu_catalog;
 
+--SHOW WHO I AM
 WITH personas (application_id, display_name) AS (
   VALUES
     ('0c3870ce-30b2-4e38-b1aa-599f9b6d98d6', 'Cassandra Lee (Analytics, APAC)'),
@@ -19,3 +13,17 @@ SELECT
   COALESCE(p.display_name, current_user()) AS display_name
 FROM (SELECT 1) AS me
 LEFT JOIN personas p ON p.application_id = current_user();
+
+
+-- CAN ACCESS - RETAIL BANKING
+SELECT txn_date, branch_name, region, total_deposits_aud
+FROM retail_banking.gold_daily_deposits
+ORDER BY txn_date DESC
+LIMIT 10;
+
+-- CANNOT ACCESS - INSURANCE
+SELECT product_code, region, loss_ratio_pct
+FROM insurance.gold_loss_ratio
+ORDER BY loss_ratio_pct DESC;
+
+
