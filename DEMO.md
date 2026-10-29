@@ -19,7 +19,7 @@
 ## Brian: changing business area
 
 - Brian starts in Insurance and can see Insurance data.
-- His business-unit tag changes to Retail Banking in Entra.
+- His business-unit tag changes to Retail Banking.
 - No Immuta policy changes are needed.
 - His access automatically changes to reflect Retail Banking.
 

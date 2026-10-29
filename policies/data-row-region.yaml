@@ -1,11 +1,16 @@
 # Only show rows whose region column (tagged Data.Region) is one of the user's
 # Region attribute values. Cassandra (APAC) cannot see EMEA or AMER rows.
+# Members of Data Stewards are exempt and see every row.
 name: Rows in the user's region
 policyKey: data row region
 type: data
 actions:
   - rules:
       - type: Row Restriction by Custom Where Clause
+        exceptions:
+          operator: any
+          groups:
+            - Data Stewards
         config:
           predicate: "@attributeValuesContains('Region', @columnTagged('Data.Region'))"
 circumstances:

@@ -38,6 +38,8 @@ the Harbourstone Financial data in `data/` (see `data/README.md`):
   `Insurance` to `Retail Banking` in `locals.tf` and apply: his access
   changes, the policies do not.
 - **Alice** (Executives group) gets the gold tables only, with PII masked.
+- **Data Stewards** (an existing SSO user, added by email in `locals.tf`) are
+  exempt from the region row filter and see every row. PII is still masked.
 
 Load the Databricks data before applying: the Harbourstone schemas and
 gold tables are looked up in the connection to tag them.

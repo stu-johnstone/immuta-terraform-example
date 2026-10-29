@@ -367,5 +367,20 @@ locals {
         Department = "Executive"
       }
     }
+
+    # Exempt from the region row filter (policies/data-row-region.yaml), so
+    # members see rows from every region. PII masking still applies.
+    data_stewards = {
+      name        = "Data Stewards"
+      description = "Sees rows from every region"
+      email       = "data-stewards@example.com"
+      members     = []
+
+      # Existing Immuta users that are not in local.users (for example SSO
+      # users), by email.
+      existing_members = ["stu.johnstone@immuta.com"]
+
+      attributes = {}
+    }
   }
 }

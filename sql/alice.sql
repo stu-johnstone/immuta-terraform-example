@@ -13,8 +13,8 @@ FROM (SELECT 1) AS me
 LEFT JOIN personas p ON p.application_id = current_user();
 
 -- 1. Gold works. Expect all three regions: APAC, EMEA and AMER.
-SELECT region, COUNT(*) AS claims, SUM(incurred_amount) AS incurred
-FROM insurance.gold_claims_overview
+SELECT region,  SUM(total_deposits_aud) AS total_deposits_aud
+FROM retail_banking.gold_daily_deposits
 GROUP BY region;
 
 -- 2. PII in gold stays masked. Expect hashed names and REDACTED email.
@@ -27,4 +27,6 @@ LIMIT 10;
 SELECT *
 FROM insurance.silver_claims
 LIMIT 10;
+
+
 

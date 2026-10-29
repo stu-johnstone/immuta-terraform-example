@@ -15,7 +15,7 @@ FROM (SELECT 1) AS me
 LEFT JOIN personas p ON p.application_id = current_user();
 
 
--- CAN ACCESS - RETAIL BANKING
+-- CAN ACCESS - RETAIL BANKING BUT ONLY FOR APAC
 SELECT txn_date, branch_name, region, total_deposits_aud
 FROM retail_banking.gold_daily_deposits
 ORDER BY txn_date DESC
@@ -27,3 +27,9 @@ FROM insurance.gold_loss_ratio
 ORDER BY loss_ratio_pct DESC;
 
 
+-- CANNOT ACCESS - RETAIL BANKING BUT ONLY FOR APAC
+SELECT txn_date, branch_name, region, total_deposits_aud
+FROM retail_banking.gold_daily_deposits
+WHERE REGION = 'EMEA'
+ORDER BY txn_date DESC
+LIMIT 10;
