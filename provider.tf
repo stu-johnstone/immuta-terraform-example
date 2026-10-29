@@ -7,7 +7,15 @@ variable "immuta_host" {
   type        = string
 }
 
-# The API key is read from the IMMUTA_API_KEY environment variable.
+variable "request_app_url" {
+  description = "Regional URL of the Request app (formerly Marketplace) API, for example https://na.api.immutacloud.com/marketplace. Needed for data products."
+  type        = string
+  default     = null
+}
+
+# The API key is read from the IMMUTA_API_KEY environment variable, and the
+# Request app token from IMMUTA_REQUEST_APP_TOKEN.
 provider "immuta" {
-  host = var.immuta_host
+  host            = var.immuta_host
+  request_app_url = var.request_app_url
 }

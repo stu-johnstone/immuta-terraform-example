@@ -7,6 +7,10 @@
 # Immuta tenant this environment manages.
 immuta_host = "https://example.hosted.immutacloud.com/"
 
+# Request app (formerly Marketplace) API for data products: the URL of the
+# tenant's region (na, eu or ap). The token comes from IMMUTA_REQUEST_APP_TOKEN.
+request_app_url = "https://na.api.immutacloud.com/marketplace"
+
 databricks_host = "dbc-00000000-0000.cloud.databricks.com"
 databricks_path = "/sql/1.0/warehouses/0000000000000000"
 

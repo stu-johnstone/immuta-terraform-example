@@ -55,6 +55,46 @@ locals {
     }
   }
 
+  # Data products in the Request app (formerly Marketplace), managed only when
+  # request_app_url is set (see data_products.tf). Who can use the tables is
+  # still decided by the subscription policies.
+  data_products = {
+    retail_banking_insights = {
+      name        = "Retail Banking Insights"
+      description = "Gold (business insight) tables for Retail Banking."
+
+      # Key from local.domains. The data product's data sources are the tables
+      # in this domain with these names.
+      domain = "retail_banking"
+      tables = local.business_units.retail_banking.gold_tables
+
+      # Email of an existing Immuta user.
+      subject_matter_expert = "stu.johnstone@immuta.com"
+
+      # Name of an existing Request app request form, used both for access
+      # requests and masking exception requests.
+      request_form = "Standard Request Form"
+    }
+
+    commercial_banking_insights = {
+      name                  = "Commercial Banking Insights"
+      description           = "Gold (business insight) tables for Commercial Banking."
+      domain                = "commercial_banking"
+      tables                = local.business_units.commercial_banking.gold_tables
+      subject_matter_expert = "stu.johnstone@immuta.com"
+      request_form          = "Standard Request Form"
+    }
+
+    insurance_insights = {
+      name                  = "Insurance Insights"
+      description           = "Gold (business insight) tables for Insurance."
+      domain                = "insurance"
+      tables                = local.business_units.insurance.gold_tables
+      subject_matter_expert = "stu.johnstone@immuta.com"
+      request_form          = "Standard Request Form"
+    }
+  }
+
   # Key => fully qualified tag name. Tags are hierarchical, and Immuta creates
   # missing parents (for example "PII"). The policies in policies/ refer to
   # these names.

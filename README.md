@@ -99,6 +99,11 @@ The Immuta API key is supplied through:
 
     export IMMUTA_API_KEY="..."
 
+Data products use the Request app (formerly Marketplace) API, which takes an
+Immuta personal access token and the regional URL set as `request_app_url`:
+
+    export IMMUTA_REQUEST_APP_TOKEN="..."
+
 Non-secret settings you do not want to commit, such as the Immuta host, connection hosts,
 usernames, the Databricks SQL warehouse path, the Snowflake warehouse and role,
 and the email of the user who owns connection data objects,
